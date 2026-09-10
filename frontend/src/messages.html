@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 消息中心</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" /> 
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   HalfCart H5 全局设计规范 V1.0
+   主色:#FF7D00 | 背景:#F5F7FA | 圆角12px
+   ═══════════════════════════════════════════ */
+:root {
+  --primary: #FF7D00;
+  --primary-light: rgba(255,125,0,.10);
+  --bg: #F5F7FA;
+  --card-bg: rgba(255,255,255,.85);
+  --title: #1D2129;
+  --body: #4E5969;
+  --hint: #86909C;
+  --border: #E5E6EB;
+  --shadow: 0 2px 12px rgba(0,0,0,.06);
+  --radius: 12px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background: var(--bg); color: var(--body); -webkit-font-smoothing:antialiased;
+  display:flex; justify-content:center; min-height:100vh;
+}
+#app {
+  width:100%; max-width:480px; min-height:100vh; background:var(--bg);
+  position:relative; overflow-x:hidden;
+  padding-top:56px; padding-bottom:calc(68px + var(--safe-bottom));
+}
+
+/* ── 顶部导航栏 ── */
+.nav-bar {
+  position:fixed; top:0; z-index:100; width:100%; max-width:480px; left:50%; transform:translateX(-50%);
+  display:flex; align-items:center; justify-content:center; height:56px; padding:0 16px;
+  background:rgba(255,255,255,.88); backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px); border-bottom:1px solid rgba(0,0,0,.04);
+}
+.nav-title { font-size:17px; font-weight:600; color:var(--title); }
+
+/* ── 分类 Tab ── */
+.tab-bar-inner {
+  display:flex; margin:16px 16px 0; background:var(--card-bg); backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px); border-radius:var(--radius); box-shadow:var(--shadow);
+  border:1px solid rgba(255,255,255,.6); padding:4px;
+}
+.tab-item-inner {
+  flex:1; text-align:center; padding:10px 0; font-size:14px; font-weight:500;
+  border-radius:10px; cursor:pointer; transition:all .25s ease; color:var(--hint); position:relative;
+}
+.tab-item-inner.active { color:var(--primary); background:var(--primary-light); font-weight:600; }
+.tab-item-inner .tab-count {
+  display:inline-block; margin-left:6px; padding:0 6px; height:18px; line-height:18px;
+  border-radius:9px; background:var(--primary); color:#fff; font-size:10px; font-weight:600; min-width:18px; text-align:center;
+}
+
+/* ── 列表容器 ── */
+.msg-list { padding:12px 16px 0; display:flex; flex-direction:column; gap:12px; }
+
+/* ── 会话卡片 ── */
+.conv-card {
+  display:flex; align-items:center; padding:14px; gap:12px;
+  background:var(--card-bg); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius); box-shadow:var(--shadow); border:1px solid rgba(255,255,255,.6);
+  transition:all .25s ease; cursor:pointer;
+}
+.conv-card:active { transform:scale(.98); }
+/* 头像 */
+.avatar-wrap { position:relative; flex-shrink:0; }
+.avatar {
+  width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-size:18px; color:#fff; font-weight:600;
+}
+.avatar.dot::after {
+  content:''; position:absolute; top:-1px; right:-1px; width:10px; height:10px;
+  background:#F53F3F; border-radius:50%; border:2px solid #fff;
+}
+.avatar-f { background:linear-gradient(135deg,#FF9A3C,var(--primary)); }
+.avatar-m { background:linear-gradient(135deg,#4FACFE,#00F2FE); }
+.avatar-g { background:linear-gradient(135deg,#43E97B,#38F9D7); }
+.avatar-p { background:linear-gradient(135deg,#FA709A,#FEE140); }
+/* 中间 */
+.conv-body { flex:1; min-width:0; }
+.conv-name { font-size:15px; font-weight:600; color:var(--title); margin-bottom:4px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.conv-preview { font-size:13px; color:var(--hint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.conv-preview strong { color:var(--body); font-weight:400; }
+/* 右侧 */
+.conv-meta { flex-shrink:0; display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+.conv-time { font-size:11px; color:var(--hint); }
+.conv-badge {
+  min-width:20px; height:20px; line-height:20px; padding:0 5px; border-radius:10px;
+  background:var(--primary); color:#fff; font-size:11px; font-weight:600; text-align:center;
+}
+
+/* ── 系统通知卡片 ── */
+.notify-card {
+  display:flex; align-items:flex-start; padding:14px; gap:12px;
+  background:var(--card-bg); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius); box-shadow:var(--shadow); border:1px solid rgba(255,255,255,.6);
+  transition:all .25s ease; cursor:pointer;
+}
+.notify-card:active { transform:scale(.98); }
+.notify-icon {
+  width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+  font-size:20px; flex-shrink:0;
+}
+.notify-icon.pay { background:rgba(0,180,42,.12); }
+.notify-icon.verify { background:rgba(255,125,0,.12); }
+.notify-icon.refund { background:rgba(22,93,255,.10); }
+.notify-icon.system { background:rgba(134,144,156,.10); }
+.notify-body { flex:1; min-width:0; }
+.notify-title { font-size:14px; font-weight:600; color:var(--title); margin-bottom:4px; }
+.notify-desc { font-size:13px; color:var(--body); margin-bottom:4px; line-height:1.5; }
+.notify-time { font-size:11px; color:var(--hint); }
+
+/* ── 空状态 ── */
+.empty-state { text-align:center; padding:48px 20px; color:var(--hint); }
+.empty-icon { font-size:48px; margin-bottom:12px; display:block; }
+
+/* ── 底部 Tab ── */
+.tab-bar-bottom {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px;
+  display:flex; align-items:center; justify-content:space-around; padding:8px 0 calc(8px + var(--safe-bottom));
+  background:rgba(255,255,255,.92); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  border-top:1px solid rgba(0,0,0,.04); z-index:200;
+}
+.tab-b-item { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:10px; color:var(--hint); }
+.tab-b-item.active { color:var(--primary); }
+.tab-b-icon { font-size:22px; }
+.tab-publish {
+  width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg,#FF9A3C,var(--primary));
+  display:flex; align-items:center; justify-content:center; font-size:28px; color:#fff;
+  box-shadow:0 4px 16px rgba(255,125,0,.35); margin-top:-20px; transition:all .25s ease;
+}
+.tab-publish:active { transform:scale(.92); }
+
+/* ── 动画 ── */
+.slide-fade-enter-active { transition:all .25s ease; }
+.slide-fade-leave-active { transition:all .15s ease; }
+.slide-fade-enter-from { opacity:0; transform:translateY(6px); }
+.slide-fade-leave-to { opacity:0; transform:translateY(-6px); }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ═══ 顶部导航 ═══ -->
+  <div class="nav-bar"><span class="nav-back" @click="goBack">←</span><span class="nav-title">消息中心</span></div>
+
+  <!-- ═══ 分类 Tab ═══ -->
+  <div class="tab-bar-inner">
+    <div class="tab-item-inner" :class="{active:tab==='chat'}" @click="tab='chat'">
+      会话消息<span class="tab-count" v-if="totalUnread>0">{{ totalUnread }}</span>
+    </div>
+    <div class="tab-item-inner" :class="{active:tab==='notify'}" @click="tab='notify'">系统通知</div>
+  </div>
+
+  <!-- ═══ 会话消息列表 ═══ -->
+  <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
+    <transition name="slide-fade">
+    <div class="msg-list" v-if="tab==='chat'" key="chat">
+      <div class="conv-card" v-for="conv in conversations" :key="conv.id"
+        @click="openChat(conv)" :style="{opacity:conv.unread===0?'.72':'1'}">
+        <div class="avatar-wrap">
+          <div class="avatar" :class="[conv.avatarColor, conv.unread>0?'dot':'']">{{ conv.avatar }}</div>
+        </div>
+        <div class="conv-body">
+          <div class="conv-name">{{ conv.name }}</div>
+          <div class="conv-preview">
+            <strong v-if="conv.lastIsMe">你：</strong>{{ conv.lastMsg }}
+          </div>
+        </div>
+        <div class="conv-meta">
+          <span class="conv-time">{{ conv.time }}</span>
+          <span class="conv-badge" v-if="conv.unread>0">{{ conv.unread>99?'99+':conv.unread }}</span>
+        </div>
+      </div>
+    </div>
+    </transition>
+  </van-pull-refresh>
+
+  <!-- ═══ 系统通知列表 ═══ -->
+  <van-pull-refresh v-model="refreshing2" @refresh="onRefresh2" success-text="刷新成功">
+    <transition name="slide-fade">
+    <div class="msg-list" v-if="tab==='notify'" key="notify">
+      <div class="notify-card" v-for="n in notifications" :key="n.id" @click="onNotifyClick(n)">
+        <div class="notify-icon" :class="n.iconClass">{{ n.icon }}</div>
+        <div class="notify-body">
+          <div class="notify-title">{{ n.title }}</div>
+          <div class="notify-desc">{{ n.desc }}</div>
+          <div class="notify-time">{{ n.time }}</div>
+        </div>
+      </div>
+    </div>
+    </transition>
+  </van-pull-refresh>
+
+<!-- ═══ 底部 Tab ═══ -->
+<div class="tab-bar-bottom">
+  <div class="tab-b-item" @click="goPage('index.html')"><span class="tab-b-icon">🏠</span><span>首页</span></div>
+  <div class="tab-b-item" @click="goPage('discover.html')"><span class="tab-b-icon">🔍</span><span>发现</span></div>
+  <div class="tab-publish" @click="goPage('publish.html')">+</div>
+  <div class="tab-b-item active"><span class="tab-b-icon">💬</span><span>消息</span></div>
+  <div class="tab-b-item" @click="goPage('profile.html')"><span class="tab-b-icon">👤</span><span>我的</span></div>
+</div>
+</div>
+
+<script>
+const { ref, computed, reactive } = Vue;
+
+Vue.createApp({
+  setup() { requireAuth();
+    const tab = ref('chat');
+    const refreshing = ref(false);
+    const refreshing2 = ref(false);
+
+    /* ── 数据 ── */
+    var goPage = window.goPage;
+    var conversations = reactive([]), notifications = reactive([]);  // 系统通知后端 API 待开发
+    var totalUnread = computed(function () { return conversations.reduce(function (s, c) { return s + (c.unread||0); }, 0); });
+
+    function fetchData() {
+      request('/api/v1/chat/unread').then(function (res) {
+        if (res && res.code === 0 && res.data) {
+          conversations.splice(0, conversations.length);
+          var list = res.data.conversations || res.data.items || [];
+          list.forEach(function (c) {
+            conversations.push({ id: c.orderId||c.id, name: c.title||'拼单会话', lastMsg: c.lastMsg||'', time: c.time||'', unread: c.unread||0, avatar: (c.name||'?')[0], avatarColor: 'avatar-'+(['f','m','g','p'][c.id%4]||'f'), lastIsMe: c.lastIsMe||false });
+          });
+        }
+      }).catch(function () {});
+    }
+    Vue.onMounted(function () { fetchData(); });
+
+    var openChat = function (conv) { conv.unread = 0; goPage('chat-detail.html', { id: conv.id }); };
+    var onNotifyClick = function (n) {};
+    var onRefresh = function () { fetchData(); setTimeout(function () { refreshing.value = false; }, 800); };
+    var onRefresh2 = function () { setTimeout(function () { refreshing2.value = false; }, 800); };
+
+	    var goBack = function () { history.back(); };
+    return { goPage, goBack,
+      tab, refreshing, refreshing2,
+      conversations, notifications, totalUnread,
+      openChat, onNotifyClick, onRefresh, onRefresh2,
+    };
+  }
+}).use(vant).mount('#app');
+</script>
+</body>
+</html>

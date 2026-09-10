@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 发布拼单</title>
+<link rel="dns-prefetch" href="https://unpkg.com" />
+<link rel="preconnect" href="https://unpkg.com" crossorigin />
+<link rel="dns-prefetch" href="https://webapi.amap.com" />
+<link rel="preconnect" href="https://webapi.amap.com" crossorigin />
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" />
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<!-- 高德地图 JSAPI v2.0 (官方 Loader 方式) -->
+<script src="https://webapi.amap.com/loader.js"></script>
+<script>
+// [安全] 必须在 AMapLoader.load() 之前配置
+window._AMapSecurityConfig = {
+  securityJsCode: window.AMAP_CONFIG.jsCode,
+};
+</script>
+<style>
+#app { padding-top:56px; padding-bottom:calc(100px + var(--safe-bottom)); }
+
+/* ── 语音输入 (PRD 4.7 三通道) ── */
+.voice-btn-wrap { display: flex; justify-content: center; margin: 12px 16px; }
+.voice-btn {
+  width: 72px; height: 72px; border-radius: 50%; border: none;
+  background: var(--primary-gradient); color: #fff; font-size: 32px;
+  cursor: pointer; box-shadow: 0 4px 24px rgba(255,125,0,.35);
+  transition: all .25s ease; display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.voice-btn:active { transform: scale(.9); }
+.voice-btn.recording {
+  background: #FF4D4F; animation: pulse-rec 1.5s infinite;
+  box-shadow: 0 4px 32px rgba(255,77,79,.5);
+}
+@keyframes pulse-rec {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.voice-btn.processing {
+  background: #86909C; pointer-events: none; animation: spin-rec 1s linear infinite;
+}
+@keyframes spin-rec {
+  to { transform: rotate(360deg); }
+}
+.voice-hint { text-align: center; font-size: 12px; color: var(--hint); margin-top: 8px; }
+.voice-timer { text-align: center; font-size: 13px; color: var(--primary); font-weight: 600; margin-top: 4px; }
+.voice-text-preview {
+  margin: 8px 16px 0; padding: 12px 14px; background: #F0FAF0; border-radius: 10px;
+  font-size: 13px; color: #2D8C4A; line-height: 1.5; display: flex; align-items: flex-start; gap: 8px;
+}
+.voice-text-preview .vt-actions { display: flex; gap: 8px; margin-top: 8px; }
+.voice-text-preview .vt-btn {
+  padding: 6px 16px; border-radius: 16px; font-size: 12px; font-weight: 500; cursor: pointer; border: none;
+}
+.voice-text-preview .vt-btn.confirm { background: var(--primary); color: #fff; }
+.voice-text-preview .vt-btn.retry { background: #F7F8FA; color: var(--body); }
+
+/* ── 模式切换 Tab ── */
+.mode-tabs {
+  display:flex; margin:16px 16px 0; background:var(--card-bg); backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px); border-radius:var(--radius); box-shadow:var(--shadow);
+  border:1px solid rgba(255,255,255,.6); padding:4px;
+}
+.mode-tab {
+  flex:1; text-align:center; padding:10px 0; font-size:14px; font-weight:500;
+  border-radius:10px; cursor:pointer; transition:all .25s ease; color:var(--hint);
+}
+.mode-tab.active { color:var(--primary); background:var(--primary-light); font-weight:600; }
+
+.form-group { margin-bottom: var(--space-lg); }
+.form-group:last-child { margin-bottom: 0; }
+
+/* ── 上传区 ── */
+.upload-area {
+  border: 2px dashed var(--border); border-radius: var(--radius); padding: 40px 20px;
+  text-align: center; cursor: pointer; color: var(--hint); transition: all .25s ease;
+  background: #FAFBFC;
+}
+.upload-area:active { background: var(--primary-light); border-color: var(--primary); }
+.upload-icon { font-size: 48px; display: block; margin-bottom: 12px; }
+.upload-title { font-size: 16px; font-weight: 600; color: var(--title); margin-bottom: 6px; }
+.upload-hint { font-size: 12px; color: var(--hint); }
+.upload-error { color: var(--danger); font-size: 13px; margin-top: 10px; text-align: center; cursor: pointer; }
+
+/* ── 图片预览 ── */
+.preview-wrap { position: relative; border-radius: var(--radius); overflow: hidden; cursor: pointer; }
+.preview-wrap img { width: 100%; max-height: 240px; object-fit: cover; display: block; }
+.preview-mask {
+  position: absolute; inset: 0; background: rgba(0,0,0,.35);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .25s ease;
+}
+.preview-wrap:active .preview-mask { opacity: 1; }
+.preview-mask span { color: #fff; font-size: 14px; font-weight: 500; }
+
+/* ── OCR 加载态 ── */
+.ocr-loading {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 24px; color: var(--primary); font-size: 14px; font-weight: 500;
+}
+.ocr-spinner {
+  width: 24px; height: 24px; border: 3px solid var(--primary-light);
+  border-top-color: var(--primary); border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── 商品选择列表 ── */
+.product-list { margin-top: 12px; }
+.product-row {
+  display: flex; align-items: center; min-height: 48px; padding: 10px 12px;
+  border-radius: 10px; margin-bottom: 4px; cursor: pointer;
+  transition: all .15s ease; gap: 10px;
+  /* 整行可点击，热区充分 */
+}
+.product-row:active { background: rgba(255,125,0,.06); }
+.product-row.selected { background: var(--primary-light); border: 1px solid rgba(255,125,0,.25); }
+
+/* 自定义勾选圆 — 视觉 + 热区完全重合 */
+.pr-check {
+  width: 24px; height: 24px; min-width: 24px; border-radius: 50%;
+  border: 2px solid var(--border); display: flex; align-items: center; justify-content: center;
+  transition: all .2s ease; font-size: 14px; color: transparent;
+}
+.pr-check.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.pr-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pr-name { font-size: 14px; font-weight: 500; color: var(--title); line-height: 1.3; }
+.pr-meta { font-size: 12px; color: var(--hint); }
+.pr-price { font-size: 15px; color: var(--primary); font-weight: 600; white-space: nowrap; }
+
+/* ── 编辑表单区 ── */
+.edit-form-card {
+  background: var(--card-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid rgba(255,255,255,.6);
+  padding: 16px;
+}
+.editor-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+}
+.editor-title { font-size: 16px; font-weight: 600; color: var(--title); }
+.editor-badge {
+  font-size: 11px; color: var(--primary); background: var(--primary-light);
+  padding: 2px 10px; border-radius: 10px;
+}
+.editor-field { margin-bottom: 12px; }
+.editor-field:last-child { margin-bottom: 0; }
+.editor-label { font-size: 12px; color: var(--hint); margin-bottom: 4px; }
+.editor-input {
+  width: 100%; height: 42px; padding: 0 14px; border-radius: 10px;
+  border: 1px solid var(--border); font-size: 15px; background: #F7F8FA; color: var(--title);
+}
+.editor-input:focus { outline: none; border-color: var(--primary); background: #fff; }
+.editor-row { display: flex; gap: 12px; }
+.editor-row .editor-field { flex: 1; }
+
+/* 编辑器操作栏 */
+.editor-actions { display: flex; gap: 8px; margin-top: 14px; }
+.editor-btn {
+  flex: 1; height: 42px; border-radius: 21px; border: none; font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: all .2s ease;
+}
+.editor-btn:active { transform: scale(.96); }
+.editor-btn.save { background: var(--primary); color: #fff; }
+.editor-btn.delete { background: rgba(255,77,79,.08); color: var(--danger); }
+.editor-btn.add { background: var(--primary-light); color: var(--primary); }
+
+/* ── 共享字段 ── */
+.price-wrap { position:relative; }
+.price-wrap .prefix {
+  position:absolute; left:14px; top:50%; transform:translateY(-50%);
+  font-size:16px; font-weight:600; color:var(--primary); z-index:1; pointer-events:none;
+}
+.price-wrap .form-input { padding-left:32px; }
+.location-wrap { position:relative; }
+.location-wrap .loc-icon {
+  position:absolute; right:14px; top:50%; transform:translateY(-50%);
+  font-size:18px; color:var(--hint); cursor:pointer;
+}
+
+.category-grid { display:flex; flex-wrap:wrap; gap:8px; }
+.cat-option {
+  padding:8px 16px; border-radius:20px; font-size:13px; border:1px solid var(--border);
+  background:#F7F8FA; color:var(--body); cursor:pointer; transition:all .25s ease;
+}
+.cat-option.selected { background:var(--primary); color:#fff; border-color:var(--primary); }
+.stepper-row { display:flex; align-items:center; justify-content:space-between; }
+.stepper-row .form-label { margin-bottom:0; }
+.time-picker-row {
+  display:flex; align-items:center; height:44px; padding:0 14px; border-radius:var(--radius);
+  background:#F7F8FA; border:1px solid var(--border); font-size:14px; color:var(--title);
+  justify-content:space-between; cursor:pointer;
+}
+.time-picker-row .arrow { color:var(--hint); font-size:12px; }
+
+/* ── 底部提交栏 ── */
+.submit-bar {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; z-index:100;
+  padding:12px 16px calc(12px + var(--safe-bottom));
+  background:rgba(255,255,255,.92); backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px); border-top:1px solid rgba(0,0,0,.04);
+}
+.submit-hint { text-align:center; font-size:11px; color:var(--hint); margin-bottom:10px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="nav-bar">
+    <span class="nav-back" @click="goBack">←</span>
+    <span class="nav-title">发布拼单</span>
+  </div>
+
+  <div class="mode-tabs">
+    <div class="mode-tab" :class="{active:mode==='normal'}" @click="switchMode('normal')">🛒 普通拼单</div>
+    <div class="mode-tab" :class="{active:mode==='spot'}" @click="switchMode('spot')">⚡ 现货转让</div>
+  </div>
+
+  <div class="voice-btn-wrap">
+    <button class="voice-btn" :class="{recording:voiceState==='recording',processing:voiceState==='processing'}" @click="onVoiceBtn">
+      <span v-if="voiceState==='idle'">🎤</span>
+      <span v-else-if="voiceState==='recording'">⏹</span>
+      <span v-else>⏳</span>
+    </button>
+  </div>
+  <div class="voice-hint" v-if="voiceState==='idle'">点击录音发单（最长30秒）</div>
+  <div class="voice-timer" v-if="voiceState==='recording'">🔴 录音中 {{ voiceTimer }}s</div>
+  <div class="voice-hint" v-if="voiceState==='processing'">AI 正在解析您的需求...</div>
+  <!-- 识别结果预览 -->
+  <div class="voice-text-preview" v-if="voiceText && voiceState==='idle'">
+    <span style="flex-shrink:0">🎙️</span>
+    <div style="flex:1">
+      <div>"{{ voiceText }}"</div>
+      <div style="font-size:11px;color:var(--hint);margin-top:4px">
+        <span v-if="voiceEngine==='webspeech'">🌐 浏览器实时识别</span>
+        <span v-else-if="voiceEngine==='aliyun'">☁️ 阿里云 NLS</span>
+        <span v-else>🤖 Whisper 本地</span>
+        · 置信度 {{ (voiceConfidence*100).toFixed(0) }}%
+      </div>
+      <div class="vt-actions">
+        <button class="vt-btn confirm" @click="onVoiceConfirm">✅ 创建订单</button>
+        <button class="vt-btn retry" @click="onVoiceRetry">🔄 重新录音</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 普通拼单（不变） ═══ -->
+  <transition name="slide-fade">
+  <div v-if="mode==='normal'" key="normal">
+    <div class="form-card">
+      <div class="form-group"><div class="form-label"><span class="required">*</span> 商品名称</div><input class="form-input" v-model="normal.goodsName" placeholder="如：山姆瑞士卷 拼单" maxlength="50" /></div>
+      <div class="form-group"><div class="form-label">商品描述 <span class="optional">(选填)</span></div><textarea class="form-textarea" v-model="normal.goodsDesc" placeholder="补充商品规格、拼单说明、采购渠道等"></textarea></div>
+      <div class="form-group"><div class="form-label"><span class="required">*</span> 商品品类</div><div class="category-grid"><span v-for="c in categories" :key="c.key" class="cat-option" :class="{selected:normal.category===c.key}" @click="normal.category=c.key">{{ c.icon }} {{ c.label }}</span></div></div>
+      <div class="form-group"><div class="form-label"><span class="required">*</span> 人均价格</div><div class="price-wrap"><span class="prefix">¥</span><input class="form-input" v-model.number="normal.price" type="number" placeholder="0.00" min="0.01" step="0.01" /></div></div>
+      <div class="form-group"><div class="stepper-row"><div class="form-label"><span class="required">*</span> 总人数（含团长）</div><van-stepper v-model="normal.totalPeople" :min="2" :max="20" integer /></div></div>
+      <div class="form-group"><div class="form-label"><span class="required">*</span> 截单时间</div><div class="time-picker-row" @click="showDeadlinePicker=true"><span>{{ normal.deadlineText }}</span><span class="arrow">▾</span></div></div>
+      <div class="form-group"><div class="form-label"><span class="required">*</span> 交接地点</div><div class="location-wrap"><input class="form-input" v-model="normal.location" placeholder="选择交接地点" /><span class="loc-icon" @click="pickLocation">📍</span></div></div>
+      <div class="form-group"><div class="form-label">采购渠道 <span class="optional">(选填)</span></div><input class="form-input" v-model="normal.channel" placeholder="如：山姆会员商店、盒马鲜生" maxlength="30" /></div>
+    </div>
+  </div>
+
+  <!-- 截单时间选择器 -->
+  <van-action-sheet v-model:show="showDeadlinePicker" title="选择截单时间" :actions="deadlineOptions" @select="onDeadlineSelect"></van-action-sheet>
+
+  </transition>
+
+  <!-- ═══ 现货转让（OCR 驱动 - 重写） ═══ -->
+  <transition name="slide-fade">
+  <div v-if="mode==='spot'" key="spot">
+
+    <!-- Step 1: 上传小票 -->
+    <div class="form-card">
+      <div v-if="!spotState.receiptPreview" class="upload-area" @click="triggerUpload">
+        <span class="upload-icon">📷</span>
+        <div class="upload-title">点击拍摄 / 上传小票</div>
+        <div class="upload-hint">支持 jpg / png，图片大小 ≤ 2MB</div>
+      </div>
+      <div v-else class="preview-wrap" @click="triggerUpload">
+        <img :src="spotState.receiptPreview" alt="小票预览" />
+        <div class="preview-mask"><span>📷 点击重新上传</span></div>
+      </div>
+      <input type="file" ref="fileInput" accept="image/*" capture="environment" style="display:none" @change="onFileChange" />
+
+      <div class="ocr-loading" v-if="spotState.ocrLoading"><div class="ocr-spinner"></div><span>AI正在识别小票商品...</span></div>
+      <div class="upload-error" v-if="spotState.ocrError" @click="retryOCR">{{ spotState.ocrError }}（点击重试）</div>
+    </div>
+
+    <!-- Step 2: 商品列表 + 编辑区（共用单一数据源 spotState.ocrItems） -->
+    <template v-if="spotState.ocrDone && spotState.ocrItems.length > 0">
+
+      <!-- 2a: 商品列表 -->
+      <div class="form-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:15px;font-weight:600;color:var(--title);">📋 识别商品（{{ selectedCount }} / 最多5件）</span>
+          <div style="display:flex;gap:6px;">
+            <span class="select-action" @click="selectAll">全选</span>
+            <span class="select-action" @click="clearAll">清空</span>
+          </div>
+        </div>
+        <div class="product-list">
+          <div
+            class="product-row"
+            v-for="(item, idx) in spotState.ocrItems"
+            :key="idx"
+            :class="{ selected: item.selected }"
+            @click="onProductClick(idx)"
+          >
+            <!-- 自定义勾选：视觉=热区，最小44px -->
+            <div class="pr-check" :class="{ on: item.selected }" style="min-width:24px;min-height:24px;display:flex;align-items:center;justify-content:center;">
+              <span v-if="item.selected">✓</span>
+            </div>
+            <div class="pr-info">
+              <span class="pr-name">{{ item.item_name || '(未命名)' }}</span>
+              <span class="pr-meta">数量 {{ item.quantity || 0 }}</span>
+            </div>
+            <span class="pr-price">¥{{ (item.total_price || 0).toFixed(2) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2b: 编辑区（操作当前选中项） -->
+      <div class="edit-form-card" v-if="editTarget !== null && spotState.ocrItems[editTarget]">
+        <div class="editor-header">
+          <span class="editor-title">✏️ 编辑商品</span>
+          <span class="editor-badge" v-if="spotState.ocrItems[editTarget].selected">已加入转让清单</span>
+          <span class="editor-badge" style="background:#F2F3F5;color:var(--hint);" v-else>未选中（仅编辑，不提交）</span>
+        </div>
+        <div class="editor-field">
+          <div class="editor-label">商品名称</div>
+          <input class="editor-input" :value="spotState.ocrItems[editTarget].item_name"
+            @input="onEditField('item_name', $event.target.value)" placeholder="商品名称" maxlength="50" />
+        </div>
+        <div class="editor-row">
+          <div class="editor-field">
+            <div class="editor-label" style="color:var(--primary);">转让价格</div>
+            <div class="price-wrap"><span class="prefix">¥</span>
+            <input class="editor-input" :value="spotState.ocrItems[editTarget].transferPrice"
+              @input="onEditField('transferPrice', parseFloat($event.target.value)||0)" type="number" placeholder="0.00" step="0.01" style="padding-left:28px;" /></div>
+          </div>
+          <div class="editor-field">
+            <div class="editor-label">商品原价</div>
+            <div class="price-wrap"><span class="prefix" style="color:var(--hint);">¥</span>
+            <input class="editor-input" :value="spotState.ocrItems[editTarget].originalPrice"
+              @input="onEditField('originalPrice', parseFloat($event.target.value)||0)" type="number" placeholder="0.00" step="0.01" style="padding-left:28px;" /></div>
+          </div>
+        </div>
+        <div class="editor-row">
+          <div class="editor-field">
+            <div class="editor-label">数量</div>
+            <input class="editor-input" :value="spotState.ocrItems[editTarget].quantity"
+              @input="onEditField('quantity', parseFloat($event.target.value)||0)" type="number" placeholder="1" step="0.01" />
+          </div>
+        </div>
+        <div class="editor-field">
+          <div class="editor-label">商品说明 <span class="optional">(选填)</span></div>
+          <input class="editor-input" :value="spotState.ocrItems[editTarget].remark"
+            @input="onEditField('remark', $event.target.value)" placeholder="补充商品成色、转让原因等" maxlength="100" />
+        </div>
+        <div class="editor-actions">
+          <button class="editor-btn save" @click="saveEditItem">💾 保存</button>
+          <button class="editor-btn delete" @click="deleteEditItem">🗑 删除</button>
+        </div>
+      </div>
+
+      <!-- 新增商品按钮 -->
+      <div class="form-card" style="text-align:center;" v-if="spotState.ocrItems.length > 0">
+        <button class="editor-btn add" style="width:100%;" @click="addNewItem">＋ 手动新增商品</button>
+      </div>
+
+      <!-- Step 3: 共享字段 -->
+      <div class="form-card" v-if="selectedCount > 0">
+        <div class="form-group">
+          <div class="form-label"><span class="required">*</span> 交接地点</div>
+          <div class="location-wrap">
+            <input class="form-input" v-model="spotState.sharedLocation" placeholder="选择交接地点" />
+            <span class="loc-icon" @click="pickLocation">📍</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label"><span class="required">*</span> 有效期</div>
+          <div class="time-picker-row"><span>发布后 24 小时内有效</span><span style="font-size:12px;color:var(--hint);">默认24小时</span></div>
+        </div>
+      </div>
+    </template>
+
+    <!-- 空结果 -->
+    <div class="empty-state" v-if="spotState.ocrDone && spotState.ocrItems.length === 0 && !spotState.ocrLoading">
+      <span class="empty-icon">🧾</span>
+      <div class="empty-title">未识别到商品</div>
+      <div class="empty-desc">请确认小票图片清晰可读，或尝试重新拍摄</div>
+    </div>
+  </div>
+  </transition>
+
+  <!-- ═══ 底部提交栏 ═══ -->
+  <div class="submit-bar">
+    <div class="submit-hint" v-if="mode==='normal'">📌 发布后将展示在附近拼单列表中，等待拼友加入</div>
+    <div class="submit-hint" v-else-if="selectedCount > 0">📌 将发布 {{ selectedCount }} 件现货</div>
+    <div class="submit-hint" v-else>📌 请先上传小票并选择要转让的商品</div>
+    <button class="submit-btn" @click="onSubmit" :disabled="submitting">
+      {{ submitting ? '发布中...' : (mode === 'spot' && selectedCount > 0 ? '立即发布 ' + selectedCount + ' 件现货' : '立即发布') }}
+    </button>
+  </div>
+
+  <!-- ═══ 高德地图选点弹窗 ═══ -->
+  <van-overlay :show="mapVisible" @click="closeMap" z-index="1000">
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;padding:0" @click.stop="">
+      <div style="display:flex;flex-direction:column;width:100%;max-width:480px;height:85vh;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.15);margin:0 8px">
+        <!-- 顶部栏 -->
+        <div style="display:flex;align-items:center;padding:10px 14px;background:#fff;border-bottom:1px solid #F0F1F3;gap:8px;flex-shrink:0">
+          <span style="font-size:20px;cursor:pointer;color:var(--hint)" @click="closeMap">✕</span>
+          <span style="font-size:15px;font-weight:600;color:var(--title)">选择交接地点</span>
+        </div>
+        <!-- 搜索栏 -->
+        <div style="display:flex;padding:8px 14px;gap:8px;flex-shrink:0">
+          <input v-model="mapSearchKeyword" placeholder="搜索地点名称" style="flex:1;height:34px;border:1px solid #E5E6EB;border-radius:17px;padding:0 14px;font-size:13px;outline:none;background:#F7F8FA" @keyup.enter="doMapSearch" />
+          <button @click="doMapSearch" style="height:34px;padding:0 14px;border:none;border-radius:17px;background:var(--primary);color:#fff;font-size:12px;font-weight:500;cursor:pointer;flex-shrink:0">搜索</button>
+        </div>
+        <!-- 地图容器 -->
+        <div style="flex:1;position:relative;overflow:hidden;background:#F5F7FA" id="amap-container">
+          <!-- 中心定位十字 -->
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-100%);z-index:10;font-size:28px;pointer-events:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))">📍</div>
+          <!-- 定位加载态 -->
+          <div v-if="mapLocating" style="position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(0,0,0,.7);color:#fff;padding:6px 14px;border-radius:14px;font-size:12px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite"></span>定位中...</div>
+        </div>
+        <!-- 底部地址栏 -->
+        <div style="flex-shrink:0;z-index:10;background:#fff;border-top:1px solid #F0F1F3;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <div style="flex:1;font-size:13px;color:var(--body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">{{ mapPickedAddr || '拖动地图选择位置' }}</div>
+          <button @click="confirmMapPick" style="height:34px;padding:0 18px;border:none;border-radius:17px;background:var(--primary);color:#fff;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0">确认选点</button>
+        </div>
+      </div>
+    </div>
+  </van-overlay>
+</div>
+
+<script>
+var app = Vue.createApp({
+  setup: function () { requireAuth();
+    var goPage = window.goPage;
+    var mode = Vue.ref('normal');
+    var submitting = Vue.ref(false);
+    var showDeadlinePicker = Vue.ref(false);
+
+    // 截止时间选项（分钟 -> 标签）
+    var DEADLINE_OPTIONS = [
+      { name: '30分钟后', value: 30 },
+      { name: '1小时后', value: 60 },
+      { name: '2小时后', value: 120 },
+      { name: '4小时后', value: 240 },
+      { name: '8小时后', value: 480 },
+      { name: '24小时后', value: 1440 },
+      { name: '48小时后', value: 2880 },
+    ];
+    var deadlineOptions = DEADLINE_OPTIONS.map(function(opt) {
+      return { name: opt.name, value: opt.value };
+    });
+
+    function onDeadlineSelect(action) {
+      showDeadlinePicker.value = false;
+      if (!action || !action.value) return;
+      var minutes = action.value;
+      var dl = new Date(Date.now() + minutes * 60000);
+      normal.deadline = dl.toISOString();
+      normal.deadlineText = action.name;
+    }
+    var fileInput = Vue.ref(null);
+
+    /* ── 品类 (动态获取) ── */
+    var categories = Vue.ref([{ key:'food', label:'美食', icon:'🍔' }]);
+
+    /* ── 普通拼单 ── */
+    var normal = Vue.reactive({
+      goodsName:'', goodsDesc:'', category:'food', price:null, totalPeople:3,
+      deadlineText:'1小时后截单', deadline:'', location:'', channel:'',
+    });
+
+    /* ── 现货转让 单一数据源 ── */
+    var spotState = Vue.reactive({
+      receiptImage: null, receiptPreview: '',
+      ocrLoading: false, ocrError: '', ocrDone: false,
+      ocrItems: [],       // [{id, item_name, unit_price, total_price, quantity, selected, transferPrice, originalPrice, remark}]
+      sharedLocation: '', sharedLat: 0, sharedLng: 0,
+    });
+
+    /* 当前编辑目标索引 (-1 = 新增模式) */
+    var editTarget = Vue.ref(-1);
+    var _itemIdCounter = 0; // 唯一ID计数器
+
+    function _newId() { return 'it_' + (++_itemIdCounter) + '_' + Date.now(); }
+
+    /* ── computed ── */
+    var selectedItems = Vue.computed(function () {
+      return spotState.ocrItems.filter(function (it) { return it.selected; });
+    });
+    var selectedCount = Vue.computed(function () { return selectedItems.value.length; });
+
+    /* ── OCR 结果过滤: [FIX 问题1] 移除明显非商品的条目 ── */
+    function _isValidProduct(item) {
+      var name = (item.item_name || '').trim();
+      if (!name) return false;
+      if (name.length === 1 && /[\d¥￥.$]/.test(name)) return false;  // 单字符价格符号
+      if (/^[\d¥￥.$,\s]+$/.test(name)) return false;  // 纯数字/价格
+      if (/^(合计|总计|实收|应付|找零|小计|优惠|折扣|total|sum)/i.test(name)) return false;
+      if (name.length > 30) return false;  // 过长（通常是识别错误）
+      return true;
+    }
+
+    /* ── 文件上传 ── */
+    var triggerUpload = function () {
+      var el = fileInput.value; if (el) { el.value = ''; el.click(); }
+    };
+    var onFileChange = function (e) {
+      var file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { vant.showToast('图片大小不能超过 2MB'); return; }
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        spotState.receiptPreview = ev.target.result;
+        spotState.receiptImage = ev.target.result;
+        runOCR();
+      };
+      reader.readAsDataURL(file);
+    };
+
+    /* ── OCR ── */
+    var runOCR = function () {
+      if (!spotState.receiptImage) return;
+      spotState.ocrLoading = true; spotState.ocrError = ''; spotState.ocrDone = false;
+      spotState.ocrItems.splice(0, spotState.ocrItems.length);
+      editTarget.value = -1;
+
+      request('/api/v1/dify/ocr-parser', { method:'POST', body:{ image_url: spotState.receiptImage } })
+        .then(function (res) {
+          spotState.ocrLoading = false;
+          // 打印后端调试信息
+          if (res && res.data && res.data.debugInfo) {
+            console.log('[OCR DEBUG]', JSON.stringify(res.data.debugInfo, null, 2));
+          }
+          if (res && res.code === 0 && res.data && res.data.items && res.data.items.length > 0) {
+            var added = 0, skipped = 0;
+            res.data.items.forEach(function (raw) {
+              // convertKeys 已把 snake_case → camelCase
+              var name = (raw.itemName || raw.item_name || '').trim();
+              if (!_isValidProduct({ item_name: name })) { skipped++; return; }
+              spotState.ocrItems.push({
+                id:            _newId(),
+                item_name:     name,
+                unit_price:    raw.unitPrice    || raw.unit_price    || 0,
+                total_price:   raw.totalPrice   || raw.total_price   || 0,
+                quantity:      raw.quantity     || 1,
+                selected:      false,
+                transferPrice: raw.totalPrice   || raw.total_price   || 0,
+                originalPrice: raw.totalPrice   || raw.total_price   || 0,
+                remark:        '',
+              });
+              added++;
+            });
+            spotState.ocrDone = true;
+            if (added > 0) {
+              vant.showToast('识别到 ' + added + ' 件商品' + (skipped > 0 ? '（过滤 ' + skipped + ' 条无效）' : ''));
+            } else {
+              spotState.ocrError = '识别结果中无有效商品，请重新拍摄清晰小票';
+            }
+          } else {
+            spotState.ocrError = (res && res.message) || 'OCR 识别失败，请重试';
+          }
+        }).catch(function () {
+          spotState.ocrLoading = false;
+          spotState.ocrError = '网络异常或识别失败，请检查网络后重试';
+        });
+    };
+    var retryOCR = function () { runOCR(); };
+
+    /* ── [FIX 问题2+3] 商品列表点击 = 选中 + 切编辑目标 ── */
+    var onProductClick = function (idx) {
+      var item = spotState.ocrItems[idx];
+      if (!item) return;
+
+      // 如果编辑区有未保存修改，提示
+      if (editTarget.value >= 0 && editTarget.value !== idx) {
+        // 直接切换（不弹窗，避免打断操作流）
+      }
+
+      // 先切编辑目标
+      editTarget.value = idx;
+
+      // 再 toggle 选中（同一操作流）
+      if (!item.selected && selectedCount.value >= 5) {
+        vant.showToast('最多选择 5 件商品');
+        return;
+      }
+      item.selected = !item.selected;
+    };
+
+    /* ── 编辑区字段修改（直接改单一数据源） ── */
+    var onEditField = function (field, value) {
+      if (editTarget.value < 0 || !spotState.ocrItems[editTarget.value]) return;
+      spotState.ocrItems[editTarget.value][field] = value;
+    };
+
+    /* ── 保存编辑（数据已在 v-model 中实时更新，此处做校验和反馈） ── */
+    var saveEditItem = function () {
+      if (editTarget.value < 0 || !spotState.ocrItems[editTarget.value]) return;
+      var item = spotState.ocrItems[editTarget.value];
+      if (!item.item_name || !item.item_name.trim()) {
+        vant.showToast('商品名称不能为空'); return;
+      }
+      if (item.transferPrice <= 0) {
+        vant.showToast('转让价格必须大于 0'); return;
+      }
+      if (item.transferPrice > item.originalPrice) {
+        vant.showToast('转让价格不得高于原价'); return;
+      }
+      vant.showToast('已保存');
+    };
+
+    /* ── 删除编辑项 ── */
+    var deleteEditItem = function () {
+      if (editTarget.value < 0 || !spotState.ocrItems[editTarget.value]) return;
+      var delIdx = editTarget.value;
+      spotState.ocrItems.splice(delIdx, 1);
+      // 自动选中相邻项
+      if (spotState.ocrItems.length === 0) {
+        editTarget.value = -1;
+      } else if (delIdx >= spotState.ocrItems.length) {
+        editTarget.value = spotState.ocrItems.length - 1;
+      } else {
+        editTarget.value = delIdx;
+      }
+    };
+
+    /* ── 新增商品 ── */
+    var addNewItem = function () {
+      var newItem = {
+        id: _newId(), item_name: '', unit_price: 0, total_price: 0, quantity: 1,
+        selected: false, transferPrice: 0, originalPrice: 0, remark: '',
+      };
+      spotState.ocrItems.push(newItem);
+      editTarget.value = spotState.ocrItems.length - 1;
+    };
+
+    /* ── 全选 / 清空 ── */
+    var selectAll = function () {
+      var limit = Math.min(spotState.ocrItems.length, 5);
+      spotState.ocrItems.forEach(function (it, i) { it.selected = i < limit; });
+    };
+    var clearAll = function () {
+      spotState.ocrItems.forEach(function (it) { it.selected = false; });
+    };
+
+    /* ── 模式切换 ── */
+    var switchMode = function (m) { mode.value = m; };
+
+    /* ── 提交 ── */
+    var onSubmit = function () {
+      if (mode.value === 'normal') {
+        if (!normal.goodsName.trim()) return vant.showToast('请输入商品名称');
+        if (!normal.location.trim()) return vant.showToast('请选择交接地点');
+        if (!normal.price || normal.price <= 0) return vant.showToast('请输入有效的人均价格');
+        vant.showLoadingToast({ message:'正在解析地址...', forbidClick:true });
+        request('/api/v1/lbs/geocode', { method:'POST', body:{ address: normal.location } })
+          .then(function(geoRes){
+            vant.closeToast();
+            var coords = (geoRes && geoRes.data && typeof geoRes.data.lat === 'number') ? geoRes.data : { lat: 39.99, lng: 116.47 };
+            return request('/api/v1/orders', { method:'POST', body:{
+              goods_name:normal.goodsName, goods_desc:normal.goodsDesc, goods_category:normal.category,
+              price_per_person:parseFloat(normal.price), total_people:normal.totalPeople,
+              meet_location:normal.location, location_lat:coords.lat, location_lng:coords.lng,
+              purchase_channel:normal.channel||'',
+              deadline: normal.deadline || new Date(Date.now() + 3600000).toISOString(),
+            }});
+          })
+          .then(function(res){ if(res&&res.code===0){ vant.showSuccessToast('发布成功！'); setTimeout(function(){goPage('order-detail.html',{id:res.data.orderId||res.data.id})},600); } })
+          .catch(function(){ vant.closeToast(); });
+        return;
+      }
+
+      var items = selectedItems.value;
+      if (items.length === 0) return vant.showToast('请至少选择一件商品');
+      if (!spotState.sharedLocation.trim()) return vant.showToast('请选择交接地点');
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        if (!it.item_name || !it.item_name.trim()) return vant.showToast('第'+(i+1)+'件商品名称不能为空');
+        if (!it.transferPrice || it.transferPrice <= 0) return vant.showToast('第'+(i+1)+'件转让价格无效');
+        if (it.transferPrice > it.originalPrice) return vant.showToast('第'+(i+1)+'件转让价格不得高于原价');
+      }
+      submitting.value = true;
+      vant.showLoadingToast({ message:'正在发布 '+items.length+' 件现货...', forbidClick:true });
+      request('/api/v1/lbs/geocode', { method:'POST', body:{ address: spotState.sharedLocation } })
+        .then(function(geoRes){
+          var coords = (geoRes && geoRes.data && typeof geoRes.data.lat === 'number') ? geoRes.data : { lat: 39.99, lng: 116.47 };
+          spotState.sharedLat = coords.lat || 39.99; spotState.sharedLng = coords.lng || 116.47;
+          var chain = Promise.resolve(); var created = [];
+          items.forEach(function(item){
+            chain = chain.then(function(){
+              return request('/api/v1/orders/spot',{ method:'POST', body:{
+                goods_name:item.item_name.trim(), transfer_price:parseFloat(item.transferPrice),
+                original_price:parseFloat(item.originalPrice)||null,
+                meet_location:spotState.sharedLocation, location_lat:spotState.sharedLat, location_lng:spotState.sharedLng,
+                receipt_img:spotState.receiptImage || '', goods_category:normal.category, goods_desc:item.remark||''
+              }}).then(function(res){ if(res&&res.code===0) created.push(res.data); });
+            });
+          });
+          return chain.then(function(){ return created; });
+        })
+        .then(function(created){
+          vant.closeToast(); submitting.value = false;
+          if (created.length > 0) { vant.showSuccessToast('成功发布 '+created.length+' 件现货！'); setTimeout(function(){ goPage(created.length===1?'order-detail.html':'index.html', created.length===1?{id:created[0].orderId||created[0].id}:undefined); },600); }
+          else { vant.showToast('发布失败，请重试'); }
+        })
+        .catch(function(){ vant.closeToast(); submitting.value = false; });
+    };
+
+    /* ── 语音发单 (PRD 4.7 三通道) ── */
+    var voiceState = Vue.ref('idle');       // idle | recording | processing
+    var voiceTimer = Vue.ref(0);
+    var voiceText = Vue.ref('');
+    var voiceEngine = Vue.ref('');
+    var voiceConfidence = Vue.ref(1.0);
+    var _voiceTimerInterval = null;
+    var _mediaRecorder = null;
+    var _mediaPending = false;              // getUserMedia 进行中标记
+    var _audioChunks = [];
+    var _speechRecognition = null;
+
+    function _startVoiceTimer() {
+      voiceTimer.value = 0;
+      _voiceTimerInterval = setInterval(function() {
+        voiceTimer.value++;
+        if (voiceTimer.value >= 30) {
+          _stopRecording('timeout');
+        }
+      }, 1000);
+    }
+    function _stopVoiceTimer() {
+      if (_voiceTimerInterval) { clearInterval(_voiceTimerInterval); _voiceTimerInterval = null; }
+    }
+
+    /* ── 彻底清理 ── */
+    function _cleanupRecording() {
+      _stopVoiceTimer();
+      _mediaPending = false;
+      var mr = _mediaRecorder; _mediaRecorder = null;
+      if (mr && mr.state !== 'inactive') {
+        mr.onstop = null;
+        try { mr.stream.getTracks().forEach(function(t){ t.stop(); }); } catch(e) {}
+      }
+      var sr = _speechRecognition; _speechRecognition = null;
+      if (sr) { try { sr.abort(); } catch(e) {} }
+      _audioChunks = [];
+    }
+
+    function _stopRecording(reason) {
+      _stopVoiceTimer();
+      // 有 MediaRecorder → 正常停止
+      if (_mediaRecorder && _mediaRecorder.state === 'recording') {
+        voiceState.value = 'processing';
+        _mediaRecorder.stop();   // onstop → _processAudioBlob
+        if (_speechRecognition) { try { _speechRecognition.stop(); } catch(e) {} }
+        return;
+      }
+      // MediaRecorder 正在获取中 → 取消获取, 先停语音识别
+      if (_mediaPending) {
+        _mediaPending = false;  // getUserMedia 回调会检查此标记并丢弃结果
+        if (_speechRecognition) { try { _speechRecognition.stop(); } catch(e) {} }
+        voiceState.value = 'idle';
+        return;
+      }
+      // Web Speech 加速器无结果 → 清理
+      if (_speechRecognition) {
+        try { _speechRecognition.stop(); } catch(e) {}
+      }
+      _cleanupRecording();
+      voiceState.value = 'idle';
+    }
+
+    var onVoiceBtn = function() {
+      if (voiceState.value === 'recording') {
+        _stopRecording('manual');
+      } else if (voiceState.value === 'processing') {
+        voiceState.value = 'idle';
+      } else if (voiceState.value === 'idle') {
+        _startVoiceRecording();
+      }
+    };
+
+    function _startVoiceRecording() {
+      _cleanupRecording();
+      voiceText.value = '';
+      voiceEngine.value = '';
+      voiceConfidence.value = 1.0;
+
+      // 主力: MediaRecorder 始终启动
+      _startMediaRecorder();
+
+      // 加速器: Web Speech 并行跑
+      var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        _speechRecognition = new SpeechRecognition();
+        _speechRecognition.lang = 'zh-CN';
+        _speechRecognition.interimResults = false;
+        _speechRecognition.maxAlternatives = 1;
+        _speechRecognition.continuous = false;
+        _speechRecognition.onresult = function(event) {
+          if (voiceState.value === 'processing') return;
+          voiceText.value = event.results[0][0].transcript;
+          voiceConfidence.value = event.results[0][0].confidence;
+          voiceEngine.value = 'webspeech';
+          _stopVoiceTimer();
+          if (_mediaRecorder && _mediaRecorder.state === 'recording') _mediaRecorder.stop();
+          voiceState.value = 'processing';
+          _processSpeechText();
+        };
+        _speechRecognition.onerror = function() {};
+        _speechRecognition.onend = function() {};
+        try { _speechRecognition.start(); } catch(e) { _speechRecognition = null; }
+      }
+    };
+
+    function _startMediaRecorder() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        vant.showToast('当前浏览器不支持录音');
+        voiceState.value = 'idle';
+        return;
+      }
+      if (!_voiceTimerInterval) _startVoiceTimer();
+      _mediaPending = true;
+
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+        if (!_mediaPending) { stream.getTracks().forEach(function(t){ t.stop(); }); return; }
+        _mediaPending = false;
+        var mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+          : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+        _mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType: mimeType } : {});
+        _mediaRecorder.ondataavailable = function(e) { if (e.data.size > 0) _audioChunks.push(e.data); };
+        _mediaRecorder.onstop = function() {
+          stream.getTracks().forEach(function(t){ t.stop(); });
+          if (_mediaRecorder) _processAudioBlob();
+        };
+        _mediaRecorder.start();
+        voiceState.value = 'recording';
+      }).catch(function(err) {
+        _mediaPending = false;
+        console.error('[Recorder] 麦克风权限被拒:', err);
+        vant.showToast('无法访问麦克风');
+        voiceState.value = 'idle';
+      });
+    };
+
+    function _processAudioBlob() {
+      _stopVoiceTimer();
+      if (_audioChunks.length === 0) {
+        voiceState.value = 'idle';
+        vant.showToast('未录制到音频，请重试');
+        return;
+      }
+      var blob = new Blob(_audioChunks, { type: (_mediaRecorder && _mediaRecorder.mimeType) || 'audio/webm' });
+      var reader = new FileReader();
+      reader.onload = function() {
+        var base64 = reader.result.split(',')[1];
+        var mime = (_mediaRecorder && _mediaRecorder.mimeType) || 'audio/webm';
+        var format = mime.includes('webm') ? 'webm' : 'wav';
+        console.log('[Recorder] 音频:', (base64.length/1024).toFixed(1), 'KB', format);
+        request('/api/v1/orders/speech-to-order', {
+          method: 'POST',
+          timeout: 60000,
+          body: { audio_data: base64, audio_format: format }
+        }).then(function(res) {
+          if (res && res.code === 0) {
+            _voiceFillForm(res.data);
+            voiceState.value = 'idle';
+            vant.showToast('识别完成，请确认信息');
+          } else {
+            voiceState.value = 'idle';
+            vant.showToast((res && res.message) || '识别失败，请重试');
+          }
+        }).catch(function(err) {
+          voiceState.value = 'idle';
+          if (err && err.message && err.message.includes('fetch')) {
+            vant.showToast('网络连接失败，请检查网络后重试');
+          }
+        });
+      };
+      reader.readAsDataURL(blob);
+    };
+
+    function _processSpeechText() {
+      vant.showLoadingToast({ message: 'AI 正在解析...', forbidClick: true });
+      request('/api/v1/orders/speech-to-order', {
+        method: 'POST',
+        timeout: 60000,
+        body: { audio_data: '', audio_format: 'text', text: voiceText.value }
+      }).then(function(res) {
+        vant.closeToast();
+        if (res && res.code === 0) {
+          _voiceFillForm(res.data);
+          voiceState.value = 'idle';
+          vant.showToast('识别完成，请确认信息');
+        } else {
+          voiceState.value = 'idle';
+          vant.showToast((res && res.message) || '识别失败');
+        }
+      }).catch(function(err) { vant.closeToast(); voiceState.value = 'idle'; if (err && err.message && err.message.includes('fetch')) vant.showToast('网络连接失败'); });
+    };
+
+    function _voiceFillForm(data) {
+      if (!data) return;
+      mode.value = 'normal';
+      if (data.goodsName) normal.goodsName = data.goodsName;
+      if (data.goodsDesc) normal.goodsDesc = data.goodsDesc;
+      if (data.totalPeople) normal.totalPeople = data.totalPeople;
+      if (data.pricePerPerson) normal.price = data.pricePerPerson;
+      if (data.meetLocation) normal.location = data.meetLocation;
+    };
+
+    var onVoiceConfirm = function() {
+      if (!voiceText.value) return;
+      vant.showLoadingToast({ message:'正在创建订单...', forbidClick:true });
+      request('/api/v1/orders/speech-to-order', {
+        method: 'POST',
+        timeout: 60000,
+        body: { audio_data: '', audio_format: 'text', text: voiceText.value }
+      }).then(function(res) {
+        vant.closeToast();
+        if (res && res.code === 0) {
+          vant.showSuccessToast('订单已创建');
+          setTimeout(function() { goPage('order-detail.html', { id: res.data.orderId || res.data.order_id }); }, 800);
+        } else { vant.showToast(res.message || '创建失败'); }
+      }).catch(function(err) { vant.closeToast(); if (err && err.message && err.message.includes('fetch')) vant.showToast('网络连接失败'); });
+    };
+
+    var onVoiceRetry = function() {
+      voiceText.value = '';
+      voiceEngine.value = '';
+      voiceConfidence.value = 1.0;
+    };
+
+    Vue.onUnmounted(function() {
+      _stopVoiceTimer();
+      if (_mediaRecorder && _mediaRecorder.state === 'recording') { _mediaRecorder.stop(); }
+      if (_speechRecognition) { try { _speechRecognition.abort(); } catch(e) {} }
+    });
+    var goBack = function () { history.back(); };
+
+    /* ── 高德地图 JSAPI v2.0 ── */
+    var AMapLib = null;          // 加载后的 AMap 实例 (避免使用全局 AMap)
+    var amapReady = Vue.ref(false);
+    var mapVisible = Vue.ref(false), mapSearchKeyword = Vue.ref(''), mapPickedAddr = Vue.ref(''), mapPickedLat = 0, mapPickedLng = 0;
+    var mapLocating = Vue.ref(false);
+    var amapInstance = null, amapGeocoder = null, amapPlaceSearch = null, amapGeolocation = null;
+
+    // 页面加载时初始化 AMap (仅一次)
+    if (typeof AMapLoader !== 'undefined') {
+      AMapLoader.load({
+        key: window.AMAP_CONFIG.webKey,
+        version: '2.0',
+        plugins: ['AMap.Geocoder', 'AMap.PlaceSearch', 'AMap.Geolocation', 'AMap.AutoComplete'],
+      }).then(function (AMap) {
+        AMap.getConfig().appname = 'halfcart';
+        AMapLib = AMap;
+        amapReady.value = true;
+      }).catch(function (e) {
+        console.error('[AMap] 加载失败:', e);
+      });
+    }
+
+    var initMap = function () {
+      var container = document.getElementById('amap-container');
+      if (!container || amapInstance) return;
+      if (!AMapLib) { vant.showToast('地图加载中，请稍后重试'); return; }
+
+      // 默认中心 (北京望京)
+      var centerLng = spotState.sharedLng || 116.481488;
+      var centerLat = spotState.sharedLat || 39.990464;
+
+      // 创建地图实例
+      amapInstance = new AMapLib.Map('amap-container', {
+        zoom: 15, center: [centerLng, centerLat], resizeEnable: true, viewMode: '2D',
+      });
+      amapGeocoder = new AMapLib.Geocoder({ city: '全国' });
+      amapPlaceSearch = new AMapLib.PlaceSearch({ city: '全国', pageSize: 10 });
+      amapGeolocation = new AMapLib.Geolocation({
+        enableHighAccuracy: true, timeout: 5000,
+        GeoLocationFirst: true,   // 优先使用高德定位 (GCJ-02)
+      });
+
+      // 逆地理编码: 地图拖拽停止后更新地址
+      amapInstance.on('moveend', function () {
+        var c = amapInstance.getCenter();
+        mapPickedLat = c.lat; mapPickedLng = c.lng;
+        amapGeocoder.getAddress([c.lng, c.lat], function (status, result) {
+          if (status === 'complete' && result.regeocode) {
+            mapPickedAddr.value = result.regeocode.formattedAddress || '';
+          }
+        });
+      });
+
+      // 尝试高精度定位 → 更新地图中心
+      mapLocating.value = true;
+      amapGeolocation.getCurrentPosition(function (status, result) {
+        mapLocating.value = false;
+        if (status === 'complete' && result.position) {
+          var pos = [result.position.lng, result.position.lat];
+          amapInstance.setZoom(16);
+          amapInstance.setCenter(pos);
+          mapPickedLat = result.position.lat;
+          mapPickedLng = result.position.lng;
+          // 逆地理编码
+          amapGeocoder.getAddress(pos, function (geoStatus, geoResult) {
+            if (geoStatus === 'complete' && geoResult.regeocode) {
+              mapPickedAddr.value = geoResult.regeocode.formattedAddress || '';
+            }
+          });
+        } else {
+          // 高德定位失败 → 回退到初始坐标逆地理
+          mapLocating.value = false;
+          amapGeocoder.getAddress([centerLng, centerLat], function (geoStatus, geoResult) {
+            if (geoStatus === 'complete' && geoResult.regeocode) {
+              mapPickedAddr.value = geoResult.regeocode.formattedAddress || '';
+            }
+          });
+        }
+      });
+    };
+
+    var pickLocation = function () {
+      mapVisible.value = true;
+      mapSearchKeyword.value = '';
+      Vue.nextTick(function () { setTimeout(initMap, 300); });
+    };
+
+    var doMapSearch = function () {
+      var kw = mapSearchKeyword.value.trim();
+      if (!kw || !amapPlaceSearch) return;
+      amapPlaceSearch.search(kw, function (status, result) {
+        if (status === 'complete' && result.poiList && result.poiList.pois.length > 0) {
+          var poi = result.poiList.pois[0];
+          var pos = [poi.location.lng, poi.location.lat];
+          amapInstance.setCenter(pos);
+          amapInstance.setZoom(17);
+          mapPickedLat = poi.location.lat; mapPickedLng = poi.location.lng;
+          mapPickedAddr.value = poi.pname + poi.cityname + poi.adname + poi.name;
+        } else {
+          vant.showToast('未找到相关地点');
+        }
+      });
+    };
+
+    var confirmMapPick = function () {
+      if (!mapPickedAddr.value) { vant.showToast('请先选择位置'); return; }
+      if (mode.value === 'spot') {
+        spotState.sharedLocation = mapPickedAddr.value;
+        spotState.sharedLat = mapPickedLat;
+        spotState.sharedLng = mapPickedLng;
+      } else {
+        normal.location = mapPickedAddr.value;
+      }
+      mapVisible.value = false;
+    };
+
+    var closeMap = function () {
+      mapVisible.value = false;
+      if (amapInstance) { amapInstance.destroy(); amapInstance = null; amapGeocoder = null; amapPlaceSearch = null; amapGeolocation = null; }
+    };
+
+    Vue.onMounted(function () {
+      requireAuth();
+      request('/api/v1/categories').then(function (res) {
+        if (res && res.code === 0 && res.data && res.data.categories) {
+          var list = res.data.categories.map(function(c) { return { key: c.key, label: c.label, icon: c.icon }; });
+          categories.value = list;
+        }
+      }).catch(function () {});
+    });
+
+    return {
+      mode, categories, normal, spotState, editTarget, fileInput,
+      selectedItems, selectedCount, submitting, showDeadlinePicker, deadlineOptions, onDeadlineSelect,
+      triggerUpload, onFileChange, onProductClick, onEditField,
+      saveEditItem, deleteEditItem, addNewItem,
+      selectAll, clearAll, switchMode,
+      onSubmit, onVoiceBtn, onVoiceConfirm, onVoiceRetry, goBack, pickLocation,
+      voiceState, voiceTimer, voiceText, voiceEngine, voiceConfidence,
+      mapVisible, mapSearchKeyword, mapPickedAddr, mapLocating, doMapSearch, confirmMapPick, closeMap,
+    };
+  }
+});
+app.use(vant); app.mount('#app');
+</script>
+</body>
+</html>

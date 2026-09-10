@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 登录</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" />
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+/* ── 登录页专属样式 ── */
+#app { background: #fff; min-height: 100vh; min-height: 100dvh; }
+
+/* 品牌区 */
+.brand-hero {
+  background: linear-gradient(160deg, #FFF7ED 0%, #FFEDD5 40%, #FED7AA 100%);
+  padding: 40px 24px 32px; text-align: center;
+  position: relative; overflow: hidden;
+}
+.brand-hero::after {
+  content: ''; position: absolute; bottom: -24px; left: 50%; transform: translateX(-50%);
+  width: 200%; height: 48px; background: #fff; border-radius: 50%;
+}
+.brand-logo { font-size: 56px; margin-bottom: 12px; display: block; }
+.brand-title { font-size: 22px; font-weight: 700; color: #1D2129; margin-bottom: 4px; }
+.brand-slogan { font-size: 13px; color: #E06900; line-height: 1.6; }
+
+/* 微信登录按钮 */
+.wechat-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: calc(100% - 48px); margin: 24px 24px 0; height: 48px;
+  border-radius: 24px; border: none; background: #07C160;
+  color: #fff; font-size: 16px; font-weight: 600; cursor: pointer;
+  transition: all .25s; box-shadow: 0 4px 16px rgba(7,193,96,.25);
+}
+.wechat-btn:active { transform: scale(.97); opacity: .85; }
+
+/* 分割线 */
+.divider { display: flex; align-items: center; gap: 12px; padding: 0 24px; margin: 16px 0; }
+.divider-line { flex: 1; height: 1px; background: #E5E6EB; }
+.divider-text { font-size: 12px; color: #86909C; flex-shrink: 0; }
+
+/* Tab 切换 */
+.login-tabs {
+  display: flex; margin: 0 24px 16px;
+  background: #F2F3F5; border-radius: 24px; padding: 3px;
+}
+.login-tab {
+  flex: 1; text-align: center; padding: 10px 0; font-size: 14px; font-weight: 500;
+  border-radius: 22px; cursor: pointer; color: #86909C; transition: all .25s;
+}
+.login-tab.active {
+  color: #1D2129; font-weight: 600; background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+
+/* 表单容器 */
+.form-area { padding: 0 24px; }
+.form-area .van-cell { border-radius: 12px; margin-bottom: 8px; }
+
+/* 密码输入行 */
+.pwd-row {
+  display: flex; align-items: center; padding: 10px 16px; background: #fff;
+  border-radius: 12px; border: 1px solid #E5E6EB; margin-bottom: 8px; gap: 8px;
+}
+.pwd-row:focus-within { border-color: #FF7D00; box-shadow: 0 0 0 3px rgba(255,125,0,.10); }
+.pwd-row .label { width: 56px; font-size: 14px; color: #86909C; flex-shrink: 0; }
+.pwd-row input { flex: 1; border: none; outline: none; font-size: 14px; color: #1D2129; text-align: right; background: transparent; }
+.pwd-row input::placeholder { color: #86909C; font-size: 13px; }
+.toggle-pwd { font-size: 18px; cursor: pointer; user-select: none; }
+
+.forgot-pwd { text-align: right; font-size: 12px; color: #FF7D00; cursor: pointer; padding: 4px 0; }
+
+/* 登录按钮 */
+.login-btn {
+  width: 100%; height: 48px; border-radius: 24px; border: none;
+  background: linear-gradient(135deg, #FF9A3C, #FF7D00); color: #fff;
+  font-size: 16px; font-weight: 600; cursor: pointer;
+  transition: all .25s; box-shadow: 0 4px 16px rgba(255,125,0,.30);
+  margin-top: 20px;
+}
+.login-btn:active { transform: scale(.97); }
+.login-btn.disabled { background: #C9CDD4; box-shadow: none; pointer-events: none; }
+
+/* 底部链接 */
+.link-row { text-align: center; margin-top: 16px; font-size: 13px; color: #86909C; }
+.link-row span { color: #FF7D00; font-weight: 500; cursor: pointer; }
+
+.agree-row {
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 24px; font-size: 12px; color: #86909C; padding-bottom: 24px;
+}
+.agree-link { color: #FF7D00; cursor: pointer; }
+
+/* 微信弹窗 */
+.wechat-modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,.5); z-index: 9999; display: flex;
+  justify-content: center; align-items: center;
+}
+.wechat-modal-card {
+  background: #fff; padding: 24px; border-radius: 16px;
+  text-align: center; width: 300px; box-shadow: 0 8px 40px rgba(0,0,0,.15);
+}
+.wechat-modal-card h3 { font-size: 16px; color: #1D2129; margin-bottom: 12px; }
+.qr-box { width: 180px; height: 180px; margin: 12px auto; border: 1px solid #E5E6EB; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: #fafafa; }
+.qr-box img { max-width: 100%; max-height: 100%; }
+.qr-btns { display: flex; justify-content: center; gap: 12px; margin-top: 12px; }
+.qr-btn { padding: 8px 20px; border-radius: 24px; border: none; font-size: 13px; cursor: pointer; }
+.qr-btn.refresh { background: #07C160; color: #fff; }
+.qr-btn.close { background: #F2F3F5; color: #4E5969; border: 1px solid #E5E6EB; }
+
+/* 协议弹窗 */
+.popup-content { background: #fff; border-radius: 16px; width: 300px; max-height: 60vh; overflow-y: auto; padding: 24px; }
+.popup-content h3 { font-size: 16px; color: #1D2129; margin-bottom: 12px; }
+.popup-content p { font-size: 13px; color: #4E5969; line-height: 1.8; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div v-if="autoLogin" style="text-align:center;padding:60px 0;color:#86909C;font-size:14px">已登录，正在跳转…</div>
+
+  <template v-if="!autoLogin">
+    <!-- 品牌区 -->
+    <div class="brand-hero">
+      <span class="brand-logo">🛒</span>
+      <div class="brand-title">半仓智拼</div>
+      <div class="brand-slogan">1.5km邻里拼单 · 省钱凑单更方便</div>
+    </div>
+
+    <!-- 微信登录 -->
+    <button class="wechat-btn" @click="wechatLogin">
+      <span style="font-size:20px">💬</span> {{ isWechat ? '微信一键登录' : '微信扫码登录' }}
+    </button>
+
+    <div class="divider">
+      <span class="divider-line"></span><span class="divider-text">其他登录方式</span><span class="divider-line"></span>
+    </div>
+
+    <!-- Tab 切换 -->
+    <div class="login-tabs">
+      <div class="login-tab" :class="{active:loginMode==='code'}" @click="loginMode='code'">验证码登录</div>
+      <div class="login-tab" :class="{active:loginMode==='pwd'}" @click="loginMode='pwd'">密码登录</div>
+    </div>
+
+    <!-- 验证码登录表单 -->
+    <div class="form-area" v-show="loginMode==='code'">
+      <van-form @submit.prevent="onCodeLogin">
+        <van-field v-model="codePhone" name="phone" label="手机号" placeholder="请输入手机号"
+          maxlength="11" type="tel"
+          :rules="[{required:true,message:'请输入手机号'},{pattern:/^1[3-9]\d{9}$/,message:'手机号格式错误'}]">
+          <template #extra>
+            <van-button size="small" :disabled="codeCountdown>0" @click.prevent.stop="sendCode" type="primary"
+              style="background:#FF7D00;border-color:#FF7D00;border-radius:16px;font-size:12px">
+              {{ codeCountdown > 0 ? codeCountdown + 's后重发' : (codeSending ? '发送中...' : '获取验证码') }}
+            </van-button>
+          </template>
+        </van-field>
+        <van-field v-model="codeValue" name="code" label="验证码" placeholder="6位验证码"
+          maxlength="6" type="tel" :rules="[{required:true,message:'请输入验证码'}]" />
+      </van-form>
+    </div>
+
+    <!-- 密码登录表单 -->
+    <div class="form-area" v-show="loginMode==='pwd'">
+      <div class="pwd-row">
+        <span class="label">账号</span>
+        <input v-model="pwdAccount" type="text" placeholder="请输入手机号/用户名" maxlength="32" />
+      </div>
+      <div class="pwd-row">
+        <span class="label">密码</span>
+        <input v-model="pwdPassword" :type="pwdVisible?'text':'password'" placeholder="请输入密码" maxlength="20" />
+        <span class="toggle-pwd" @click.stop="pwdVisible=!pwdVisible">{{ pwdVisible ? '👁' : '👁‍🗨' }}</span>
+      </div>
+      <div class="forgot-pwd" @click="onForgotPwd">忘记密码？</div>
+    </div>
+
+    <!-- 登录错误提示 -->
+    <div class="login-error" v-if="loginError" style="padding:12px 24px 0">
+      <div style="background:#FFF2F0;border:1px solid #FFCCC7;border-radius:8px;padding:10px 14px;font-size:13px;color:#F53F3F;line-height:1.6">
+        {{ loginError }}
+        <div v-if="lockCountdown>0" style="margin-top:4px;font-weight:600">
+          ⏱ 账号已锁定，请 {{ Math.ceil(lockCountdown/60) }} 分钟后重试
+        </div>
+      </div>
+    </div>
+
+    <!-- 验证码登录提示 -->
+    <div class="login-error" v-if="suggestCode" style="padding:12px 24px 0">
+      <div style="background:#FFF7E6;border:1px solid #FFD591;border-radius:8px;padding:10px 14px;font-size:13px;color:#D46B08;line-height:1.6">
+        💡 {{ suggestCode }}
+        <span style="color:#FF7D00;font-weight:600;cursor:pointer;margin-left:4px" @click="loginMode='code'">去验证码登录 →</span>
+      </div>
+    </div>
+
+    <!-- 登录按钮 -->
+    <div style="padding:0 24px">
+      <button class="login-btn" @click="loginMode==='code'?onCodeLogin():onPwdLogin()">立即登录</button>
+    </div>
+
+    <div class="link-row">没有账号？<span @click="goRegister">立即注册</span></div>
+
+    <div class="agree-row">
+      <van-checkbox v-model="agree" icon-size="14px" checked-color="#FF7D00" />
+      <span style="margin-left:4px">我已阅读并同意</span>
+      <span class="agree-link" @click="showAgreement('user')">《用户协议》</span><span>和</span>
+      <span class="agree-link" @click="showAgreement('privacy')">《隐私政策》</span>
+    </div>
+  </template>
+
+  <!-- 协议弹窗 -->
+  <van-overlay :show="showAgreementPopup" @click="showAgreementPopup=false">
+    <div style="display:flex;align-items:center;justify-content:center;height:100%" @click.stop>
+      <div class="popup-content">
+        <h3>{{ agreementTitle }}</h3>
+        <p>{{ agreementContent }}</p>
+        <button class="login-btn" style="margin-top:16px" @click.stop="showAgreementPopup=false">我知道了</button>
+      </div>
+    </div>
+  </van-overlay>
+</div>
+
+<!-- 微信二维码弹窗（独立于Vue） -->
+<div id="wechat-modal" style="display:none;" class="wechat-modal-overlay">
+  <div class="wechat-modal-card">
+    <h3>微信扫码登录</h3>
+    <div class="qr-box">
+      <img id="wechat-qrcode-img" src="" alt="微信二维码" style="display:none;" />
+      <span id="wechat-qrcode-loading" style="color:#86909C;">二维码加载中...</span>
+    </div>
+    <div class="qr-btns">
+      <button id="refresh-wechat-btn" class="qr-btn refresh">刷新二维码</button>
+      <button id="close-wechat-btn" class="qr-btn close">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var isWechatEnv = /micromessenger/i.test(navigator.userAgent);
+var redirect = getQueryParam('redirect');
+var wxToken = getQueryParam('access_token');
+
+var app = Vue.createApp({
+  setup: function () {
+    var autoLogin = Vue.ref(false);
+    var agree = Vue.ref(false);
+    var loginMode = Vue.ref('code');
+    var codePhone = Vue.ref(''), codeValue = Vue.ref(''), codeCountdown = Vue.ref(0), codeSending = Vue.ref(false), codeLoading = Vue.ref(false);
+    var pwdAccount = Vue.ref(''), pwdPassword = Vue.ref(''), pwdVisible = Vue.ref(false);
+    var showAgreementPopup = Vue.ref(false), agreementTitle = Vue.ref(''), agreementContent = Vue.ref('');
+    var isWechat = Vue.ref(isWechatEnv);
+    var loginError = Vue.ref(''), suggestCode = Vue.ref(''), lockCountdown = Vue.ref(0);
+    var lockTimer = null;
+
+    /* 已登录跳转 */
+    if (getToken()) { autoLogin.value = true; setTimeout(function(){location.href=redirect?decodeURIComponent(redirect):'index.html'},300); }
+
+    /* 微信回调Token处理 */
+    if (wxToken) {
+      setToken(wxToken);
+      var wxRefresh = getQueryParam('refresh_token');
+      if (wxRefresh) setRefreshToken(wxRefresh);
+      var wxUid = getQueryParam('user_id');
+      var wxNick = getQueryParam('nickname');
+      if (wxUid) setUser({userId:parseInt(wxUid),nickname:wxNick||''});
+      location.href = redirect ? decodeURIComponent(redirect) : 'index.html';
+    }
+
+    function goRegister() { goPage('register.html', redirect?{redirect:redirect}:{}); }
+
+    /* 发送验证码 */
+    function sendCode() {
+      if (codeCountdown.value > 0) return;
+      if (!/^1[3-9]\d{9}$/.test(codePhone.value)) { vant.showToast('请输入正确的手机号'); return; }
+      codeSending.value = true;
+      request('/api/v1/auth/send-login-code', { method:'POST', body:{phone:codePhone.value}})
+        .then(function(){vant.showToast('验证码已发送');startCountdown();})
+        .catch(function(e){vant.showToast(e.message||'发送失败');})
+        .finally(function(){codeSending.value=false;});
+    }
+    function startCountdown(){codeCountdown.value=60;var t=setInterval(function(){codeCountdown.value--;if(codeCountdown.value<=0)clearInterval(t)},1000);}
+
+    /* 验证码登录 */
+    function onCodeLogin() {
+      if (!agree.value) { vant.showToast('请先同意用户协议和隐私政策'); return; }
+      if (codeLoading.value) return;
+      codeLoading.value = true;
+      request('/api/v1/auth/login-by-code', { method:'POST', body:{phone:codePhone.value,code:codeValue.value}})
+        .then(function(res){
+          if(res&&res.code===0&&res.data){
+            setToken(res.data.accessToken); setRefreshToken(res.data.refreshToken);
+            setUser({userId:res.data.userId,nickname:res.data.nickname});
+            vant.showToast('登录成功');
+            setTimeout(function(){location.href=redirect?decodeURIComponent(redirect):'index.html'},300);
+          } else { vant.showToast((res&&res.message)||'登录失败'); }
+        }).catch(function(){}).finally(function(){codeLoading.value=false;});
+    }
+
+    /* 提取错误信息 */
+    function showLoginError(msg) {
+      suggestCode.value = '';
+      loginError.value = msg || '登录失败，请重试';
+      /* 检测是否建议用验证码登录 */
+      if (msg && msg.indexOf('验证码登录') !== -1) {
+        suggestCode.value = '该账号未设置密码，请使用验证码登录';
+        loginError.value = '密码登录不可用';
+      }
+      /* 检测锁定状态 */
+      if (msg && msg.indexOf('锁定') !== -1) {
+        var match = msg.match(/(\d+)\s*分钟/);
+        if (match) {
+          startLockCountdown(parseInt(match[1]) * 60);
+        }
+      }
+    }
+
+    function startLockCountdown(seconds) {
+      lockCountdown.value = seconds;
+      if (lockTimer) clearInterval(lockTimer);
+      lockTimer = setInterval(function(){
+        lockCountdown.value--;
+        if (lockCountdown.value <= 0) {
+          clearInterval(lockTimer);
+          lockTimer = null;
+          loginError.value = '';
+        }
+      }, 1000);
+    }
+
+    /* 密码登录 */
+    function onPwdLogin() {
+      if (!agree.value) { vant.showToast('请先同意用户协议和隐私政策'); return; }
+      if (codeLoading.value) return;
+      loginError.value = ''; suggestCode.value = '';
+      codeLoading.value = true;
+
+      /* 复用 request()，但在 .then 中通过 code !== 0 捕获业务错误 */
+      request('/api/v1/auth/login-by-password', {
+        method: 'POST',
+        body: { account: pwdAccount.value, password: pwdPassword.value }
+      })
+      .then(function(res){
+        if (res && res.code === 0 && res.data) {
+          setToken(res.data.accessToken); setRefreshToken(res.data.refreshToken);
+          setUser({userId: res.data.userId, nickname: res.data.nickname});
+          loginError.value = '';
+          vant.showToast('登录成功');
+          setTimeout(function(){ location.href = redirect ? decodeURIComponent(redirect) : 'index.html'; }, 300);
+        } else {
+          showLoginError((res && res.message) || '账号或密码错误');
+        }
+      })
+      .catch(function(e){
+        /* request() 对 400/423 等状态码会先弹 toast 再 throw。
+           这里只做兜底：如果 request() 已经弹过 toast，就不再重复。 */
+        if (e && e.message && e.message.indexOf('网络异常') === -1) {
+          showLoginError(e.message);
+        }
+      })
+      .finally(function(){ codeLoading.value = false; });
+    }
+
+    function onForgotPwd() { vant.showToast('请联系客服重置密码'); }
+
+    /* 微信登录 */
+    var wechatModal = document.getElementById('wechat-modal');
+    var qrImg = document.getElementById('wechat-qrcode-img');
+    var qrLoading = document.getElementById('wechat-qrcode-loading');
+    var refreshBtn = document.getElementById('refresh-wechat-btn');
+    var closeBtn = document.getElementById('close-wechat-btn');
+
+    function wechatLogin() {
+      wechatModal.style.display = 'flex'; qrImg.style.display = 'none'; qrLoading.style.display = 'block';
+      loadWechatQR();
+    }
+    function closeWechatModal() { wechatModal.style.display = 'none'; }
+    if (closeBtn) closeBtn.onclick = closeWechatModal;
+    if (refreshBtn) refreshBtn.onclick = loadWechatQR;
+    wechatModal.addEventListener('click', function(e) { if (e.target === wechatModal) closeWechatModal(); });
+
+    var wechatSceneId = '';
+    var apiBase = document.documentElement.dataset.apiBase || 'http://localhost:8000';
+
+    function loadWechatQR() {
+      qrLoading.style.display = 'block'; qrImg.style.display = 'none';
+      /* 直接 fetch，不用 request() 包裹，因为 wechat/qrcode 返回扁平 JSON */
+      fetch(apiBase + '/api/v1/wechat/qrcode')
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+          if(data && data.qr_img){
+            qrImg.src = data.qr_img; qrImg.style.display = 'block'; qrLoading.style.display = 'none';
+            wechatSceneId = data.scene_id;
+            pollWechatState(data.scene_id);
+          } else {
+            qrLoading.textContent = '二维码加载失败，请刷新';
+          }
+        }).catch(function(){ qrLoading.textContent = '加载失败，请刷新'; });
+    }
+
+    function pollWechatState(sceneId) {
+      var polls = 0, maxPolls = 60;
+      var timer = setInterval(function(){
+        polls++; if (polls > maxPolls) { clearInterval(timer); qrLoading.textContent = '二维码已过期，请刷新'; return; }
+        fetch(apiBase + '/api/v1/wechat/check?scene_id=' + sceneId)
+          .then(function(r){ return r.json(); })
+          .then(function(data){
+            if(data && data.status === 'success'){
+              clearInterval(timer); closeWechatModal();
+              setToken(data.access_token); setRefreshToken(data.refresh_token);
+              setUser({userId: data.user_id, nickname: data.nickname});
+              vant.showToast('登录成功');
+              setTimeout(function(){location.href=redirect?decodeURIComponent(redirect):'index.html'},300);
+            }
+          }).catch(function(){});
+      }, 2000);
+    }
+
+    /* 协议弹窗 — 从 JSON 加载 (与 register.html 一致) */
+    var agreementsCache = null;
+    async function showAgreement(type) {
+      agreementTitle.value = type==='user'?'用户协议':'隐私政策';
+      if (!agreementsCache) {
+        try {
+          var res = await fetch('data/agreements.json');
+          agreementsCache = await res.json();
+        } catch(e) {
+          agreementContent.value = '协议加载失败，请稍后重试';
+          showAgreementPopup.value = true;
+          return;
+        }
+      }
+      agreementContent.value = agreementsCache[type] || '暂无内容';
+      showAgreementPopup.value = true;
+    }
+
+    return {
+      autoLogin, agree, loginMode, codePhone, codeValue, codeCountdown, codeSending, codeLoading,
+      pwdAccount, pwdPassword, pwdVisible, showAgreementPopup, agreementTitle, agreementContent, isWechat,
+      loginError, suggestCode, lockCountdown,
+      goRegister, sendCode, onCodeLogin, onPwdLogin, onForgotPwd, wechatLogin, showAgreement,
+    };
+  }
+});
+app.use(vant); app.mount('#app');
+</script>
+</body>
+</html>

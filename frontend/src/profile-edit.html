@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 个人资料</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" /> 
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   HalfCart H5 全局设计规范 V1.0
+   主色:#FF7D00 | 风险:#FF4D4F | 背景:#F5F7FA
+   ═══════════════════════════════════════════ */
+:root {
+  --primary:#FF7D00; --primary-light:rgba(255,125,0,.10);
+  --danger:#FF4D4F;
+  --bg:#F5F7FA; --card-bg:rgba(255,255,255,.85);
+  --title:#1D2129; --body:#4E5969; --hint:#86909C;
+  --shadow:0 2px 12px rgba(0,0,0,.06);
+  --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--body);-webkit-font-smoothing:antialiased;
+  display:flex;justify-content:center;min-height:100vh
+}
+#app{
+  width:100%;max-width:480px;min-height:100vh;background:var(--bg);
+  position:relative;overflow-x:hidden;padding-top:56px;padding-bottom:24px
+}
+
+/* ── 顶部导航 ── */
+.nav-bar{
+  position:fixed;top:0;z-index:100;width:100%;max-width:480px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;height:56px;padding:0 16px;gap:12px;
+  background:rgba(255,255,255,.88);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,0,0,.04)
+}
+.nav-back{font-size:22px;color:var(--title);flex-shrink:0;cursor:pointer}
+.nav-title{flex:1;text-align:center;font-size:17px;font-weight:600;color:var(--title)}
+
+/* ── 通用卡片 ── */
+.card{
+  margin:12px 16px 0;padding:0;
+  background:var(--card-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.6);overflow:hidden
+}
+.module-title{font-size:14px;font-weight:600;color:var(--title);padding:14px 16px 0;margin-bottom:0}
+
+/* ── 头像区 ── */
+.avatar-section{padding:24px 16px 20px;text-align:center}
+.avatar-circle{
+  width:80px;height:80px;border-radius:50%;margin:0 auto 12px;
+  background:linear-gradient(135deg,#FF9A3C,var(--primary));
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;color:#fff;font-weight:700;cursor:pointer;
+  box-shadow:0 4px 16px rgba(255,125,0,.28);transition:all .25s ease
+}
+.avatar-circle:active{transform:scale(.94)}
+.avatar-btn{font-size:13px;color:var(--primary);font-weight:500;cursor:pointer}
+
+/* ── 列表行 ── */
+.list-row{
+  display:flex;align-items:center;padding:14px 16px;cursor:default;transition:all .25s ease
+}
+.list-row+.list-row{border-top:1px solid rgba(0,0,0,.04)}
+.list-row.clickable{cursor:pointer}
+.list-row.clickable:active{opacity:.7;background:rgba(0,0,0,.01)}
+.list-label{font-size:14px;color:var(--hint);width:64px;flex-shrink:0}
+.list-value{flex:1;text-align:right;font-size:14px;color:var(--title);font-weight:500}
+.list-arrow{font-size:14px;color:var(--hint);margin-left:8px;flex-shrink:0}
+.list-value.readonly{color:var(--body);font-weight:400}
+
+/* ── 安全区 ── */
+.danger-text{color:var(--danger)!important;font-weight:500}
+
+/* ── 弹窗内容 ── */
+.popup-content{padding:20px 16px}
+.popup-title{font-size:16px;font-weight:600;color:var(--title);text-align:center;margin-bottom:20px}
+
+/* ── 性别选择 ── */
+.gender-options{display:flex;gap:12px;justify-content:center}
+.gender-opt{
+  flex:1;max-width:120px;padding:14px 0;border-radius:var(--radius);text-align:center;
+  border:2px solid rgba(0,0,0,.06);background:#F7F8FA;font-size:15px;color:var(--body);
+  cursor:pointer;transition:all .25s ease
+}
+.gender-opt.selected{border-color:var(--primary);background:var(--primary-light);color:var(--primary);font-weight:600}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ═══ 顶部导航 ═══ -->
+  <div class="nav-bar">
+    <span class="nav-back" @click="goBack">←</span>
+    <span class="nav-title">个人资料</span>
+  </div>
+
+  <!-- ═══ 头像 ═══ -->
+  <div class="card">
+    <div class="avatar-section">
+      <div class="avatar-circle" @click="changeAvatar">{{ profile.avatar }}</div>
+      <div class="avatar-btn" @click="changeAvatar">更换头像</div>
+    </div>
+  </div>
+
+  <!-- ═══ 资料信息 ═══ -->
+  <div class="card">
+    <div class="list-row clickable" @click="openEdit('nickname')">
+      <span class="list-label">昵称</span><span class="list-value">{{ profile.nickname }}</span><span class="list-arrow">›</span>
+    </div>
+    <div class="list-row clickable" @click="openEdit('gender')">
+      <span class="list-label">性别</span><span class="list-value">{{ profile.genderLabel }}</span><span class="list-arrow">›</span>
+    </div>
+    <div class="list-row clickable" @click="openEdit('phone')">
+      <span class="list-label">手机号</span><span class="list-value">{{ profile.phoneMasked }}</span><span class="list-arrow">›</span>
+    </div>
+    <div class="list-row">
+      <span class="list-label">信用分</span><span class="list-value readonly">{{ profile.credit }}</span>
+    </div>
+    <div class="list-row">
+      <span class="list-label">注册时间</span><span class="list-value readonly">{{ profile.regDate }}</span>
+    </div>
+  </div>
+
+  <!-- ═══ 账号安全 ═══ -->
+  <div class="card">
+    <div class="module-title">账号安全</div>
+    <div class="list-row clickable" @click="openEdit('password')">
+      <span class="list-label">修改密码</span><span class="list-value"></span><span class="list-arrow">›</span>
+    </div>
+    <div class="list-row clickable" @click="confirmDelete">
+      <span class="list-label danger-text">注销账号</span><span class="list-value"></span><span class="list-arrow" style="color:var(--danger)">›</span>
+    </div>
+  </div>
+
+  <!-- ═══ 编辑弹窗 ─═�� -->
+  <van-popup v-model:show="showPopup" position="bottom" round :style="{maxWidth:'480px',margin:'0 auto'}">
+    <div class="popup-content">
+      <!-- 昵称修改 -->
+      <template v-if="editField==='nickname'">
+        <div class="popup-title">修改昵称</div>
+        <van-field v-model="editValue" label="昵称" placeholder="请输入新昵称" maxlength="30" :border="true" />
+        <button style="margin-top:16px;width:100%;height:44px;border-radius:22px;border:none;background:var(--primary);color:#fff;font-size:15px;font-weight:600" @click="saveEdit">保存</button>
+      </template>
+      <!-- 性别修改 -->
+      <template v-else-if="editField==='gender'">
+        <div class="popup-title">选择性别</div>
+        <div class="gender-options">
+          <div class="gender-opt" :class="{selected:editValue==='male'}" @click="editValue='male'">👨 男</div>
+          <div class="gender-opt" :class="{selected:editValue==='female'}" @click="editValue='female'">👩 女</div>
+        </div>
+        <button style="margin-top:16px;width:100%;height:44px;border-radius:22px;border:none;background:var(--primary);color:#fff;font-size:15px;font-weight:600" @click="saveEdit">保存</button>
+      </template>
+      <!-- 手机号修改 -->
+      <template v-else-if="editField==='phone'">
+        <div class="popup-title">更换手机号</div>
+        <van-field v-model="editValue" label="新手机号" placeholder="请输入新手机号" maxlength="11" type="tel" :border="true" />
+        <van-field v-model="smsCode" label="验证码" placeholder="请输入验证码" maxlength="6" type="tel" :border="true">
+          <template #button><span style="font-size:13px;color:var(--primary);font-weight:500">获取验证码</span></template>
+        </van-field>
+        <button style="margin-top:16px;width:100%;height:44px;border-radius:22px;border:none;background:var(--primary);color:#fff;font-size:15px;font-weight:600" @click="saveEdit">确认更换</button>
+      </template>
+      <!-- 修改密码 -->
+      <template v-else-if="editField==='password'">
+        <div class="popup-title">修改密码</div>
+        <van-field v-model="editValue" label="旧密码" placeholder="请输入旧密码" type="password" :border="true" />
+        <van-field v-model="newPassword" label="新密码" placeholder="8-20位，含字母和数字" type="password" :border="true" />
+        <van-field v-model="confirmPassword" label="确认密码" placeholder="再次输入新密码" type="password" :border="true" />
+        <button style="margin-top:16px;width:100%;height:44px;border-radius:22px;border:none;background:var(--primary);color:#fff;font-size:15px;font-weight:600" @click="saveEdit">确认修改</button>
+      </template>
+    </div>
+  </van-popup>
+</div>
+
+<script>
+const { ref, reactive } = Vue;
+
+Vue.createApp({
+  setup() { requireAuth();
+    /* ── 资料数据 ── */
+    var profile = reactive({ avatar:'?', nickname:'加载中...', gender:'', genderLabel:'', phoneMasked:'', credit:'0', regDate:'' });
+    var showPopup = ref(false), editField = ref(''), editValue = ref(''), smsCode = ref(''), newPassword = ref(''), confirmPassword = ref('');
+
+    function fetchProfile() {
+      request('/api/v1/user/profile').then(function (res) {
+        if (res && res.code === 0 && res.data) {
+          var d = res.data;
+          profile.avatar = (d.nickname||'?')[0]; profile.nickname = d.nickname || '';
+          profile.phoneMasked = d.phoneMasked || ''; profile.credit = (d.creditScore||0)+'';
+          profile.regDate = d.createdAt ? d.createdAt.slice(0,10) : '';
+        }
+      }).catch(function () {});
+    }
+    Vue.onMounted(function () { fetchProfile(); });
+
+    var changeAvatar = function () { vant.showToast('选择头像'); };
+    var openEdit = function (field) {
+      editField.value = field;
+      if (field === 'nickname') editValue.value = profile.nickname;
+      else if (field === 'gender') editValue.value = profile.gender;
+      else if (field === 'phone') editValue.value = '';
+      else if (field === 'password') editValue.value = '';
+      smsCode.value = ''; newPassword.value = ''; confirmPassword.value = '';
+      showPopup.value = true;
+    };
+    var saveEdit = function () {
+      var field = editField.value, body = {};
+      if (field === 'nickname' && editValue.value.trim()) { body.nickname = editValue.value.trim(); profile.nickname = editValue.value.trim(); }
+      else if (field === 'gender') { body.gender = editValue.value; profile.gender = editValue.value; profile.genderLabel = editValue.value==='male'?'男':'女'; }
+      else if (field === 'password' && newPassword.value) { body.password = newPassword.value; }
+      else { vant.showToast('请填写完整信息'); return; }
+      request('/api/v1/user/profile', { method:'PUT', body:body }).then(function (res) {
+        if (res && res.code === 0) { showPopup.value = false; vant.showSuccessToast('保存成功'); }
+      }).catch(function () {});
+    };
+    const confirmDelete = () => {
+      vant.showConfirmDialog({
+        title:'注销账号', message:'注销后所有数据将被永久删除，无法恢复。确定要注销吗？',
+        confirmButtonText:'确认注销', confirmButtonColor:'#FF4D4F', cancelButtonText:'我再想想',
+      }).then(()=>{ vant.showSuccessToast('已提交注销申请'); }).catch(()=>{});
+    };
+    const goBack = () => { history.back(); };
+
+    return { profile,showPopup,editField,editValue,smsCode,newPassword,confirmPassword,
+      changeAvatar,openEdit,saveEdit,confirmDelete,goBack };
+  }
+}).use(vant).mount('#app');
+</script>
+</body>
+</html>

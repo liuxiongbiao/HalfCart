@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 帮助中心</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" /> 
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   HalfCart H5 全局设计规范 V1.0
+   主色:#FF7D00 | 背景:#F5F7FA | 圆角12px
+   ═══════════════════════════════════════════ */
+:root {
+  --primary:#FF7D00; --primary-light:rgba(255,125,0,.10);
+  --bg:#F5F7FA; --card-bg:rgba(255,255,255,.85);
+  --title:#1D2129; --body:#4E5969; --hint:#86909C;
+  --shadow:0 2px 12px rgba(0,0,0,.06);
+  --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--body);-webkit-font-smoothing:antialiased;
+  display:flex;justify-content:center;min-height:100vh
+}
+#app{
+  width:100%;max-width:480px;min-height:100vh;background:var(--bg);
+  position:relative;overflow-x:hidden;padding-top:56px;padding-bottom:24px
+}
+
+/* ── 顶部导航 ── */
+.nav-bar{
+  position:fixed;top:0;z-index:100;width:100%;max-width:480px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;height:56px;padding:0 16px;gap:12px;
+  background:rgba(255,255,255,.88);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,0,0,.04)
+}
+.nav-back{font-size:22px;color:var(--title);flex-shrink:0;cursor:pointer}
+.nav-title{flex:1;text-align:center;font-size:17px;font-weight:600;color:var(--title)}
+
+/* ── 搜索框 ── */
+.search-wrap{padding:12px 16px}
+.search-box{
+  display:flex;align-items:center;height:40px;padding:0 14px;gap:8px;
+  background:var(--card-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-radius:20px;border:1px solid rgba(255,255,255,.6);box-shadow:var(--shadow)
+}
+.search-icon{font-size:16px;flex-shrink:0}
+.search-input{flex:1;border:none;background:transparent;outline:none;font-size:14px;color:var(--title)}
+.search-input::placeholder{color:var(--hint)}
+
+/* ── 分类卡片 ── */
+.cat-card{
+  margin:12px 16px 0;
+  background:var(--card-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.6);overflow:hidden
+}
+.cat-header{
+  display:flex;align-items:center;justify-content:space-between;padding:14px 16px;
+  cursor:pointer;transition:all .25s ease
+}
+.cat-header:active{opacity:.7}
+.cat-name{font-size:15px;font-weight:600;color:var(--title);display:flex;align-items:center;gap:8px}
+.cat-icon{font-size:18px}
+.cat-arrow{font-size:14px;color:var(--hint);transition:transform .25s ease}
+.cat-arrow.open{transform:rotate(180deg)}
+
+/* ── 问题列表 ── */
+.qa-list{overflow:hidden;max-height:0;transition:max-height .35s ease}
+.qa-list.open{max-height:800px}
+.qa-item{cursor:pointer;transition:all .25s ease}
+.qa-item+.qa-item{border-top:1px solid rgba(0,0,0,.04)}
+.qa-q{
+  display:flex;align-items:center;justify-content:space-between;padding:12px 16px;
+  font-size:14px;font-weight:500;color:var(--title);gap:8px
+}
+.qa-q .q-badge{font-size:12px;color:var(--primary);flex-shrink:0}
+.qa-q .q-arrow{font-size:12px;color:var(--hint);transition:transform .25s ease}
+.qa-q .q-arrow.open{transform:rotate(180deg)}
+.qa-a{
+  overflow:hidden;max-height:0;transition:max-height .3s ease;
+  font-size:13px;color:var(--hint);line-height:1.75;padding:0 16px
+}
+.qa-a.open{max-height:300px;padding-bottom:14px}
+
+/* ── 客服入口 ── */
+.cs-card{
+  margin:16px 16px 0;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;
+  background:var(--card-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.6);
+  cursor:pointer;transition:all .25s ease
+}
+.cs-card:active{opacity:.7}
+.cs-left{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--body)}
+.cs-left .cs-icon{font-size:22px}
+.cs-btn{font-size:13px;color:var(--primary);font-weight:600}
+
+/* 搜索高亮 */
+.highlight{color:var(--primary);font-weight:600}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ═══ 顶部导航 ═══ -->
+  <div class="nav-bar">
+    <span class="nav-back" @click="goBack">←</span>
+    <span class="nav-title">帮助中心</span>
+  </div>
+
+  <!-- ═══ 搜索框 ═══ -->
+  <div class="search-wrap">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" v-model="searchKeyword" placeholder="搜索常见问题" @input="onSearch" />
+    </div>
+  </div>
+
+  <!-- ═══ 分类折叠面板 ═══ -->
+  <div class="cat-card" v-for="(cat,ci) in filteredCategories" :key="ci">
+    <div class="cat-header" @click="toggleCat(ci)">
+      <span class="cat-name"><span class="cat-icon">{{ cat.icon }}</span>{{ cat.name }}</span>
+      <span class="cat-arrow" :class="{open:cat.open}">▾</span>
+    </div>
+    <div class="qa-list" :class="{open:cat.open}">
+      <div class="qa-item" v-for="(qa,qi) in cat.items" :key="qi">
+        <div class="qa-q" @click="toggleQA(cat,qi)">
+          <span>{{ qa.q }}</span>
+          <span class="q-arrow" :class="{open:qa.open}">▾</span>
+        </div>
+        <div class="qa-a" :class="{open:qa.open}" v-html="qa.a"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 客服入口 ═══ -->
+  <div class="cs-card" @click="goCS">
+    <div class="cs-left"><span class="cs-icon">💬</span> 没找到答案？</div>
+    <span class="cs-btn">联系在线客服 ›</span>
+  </div>
+</div>
+
+<script>
+const { ref, reactive, computed } = Vue;
+
+Vue.createApp({
+  setup() { requireAuth();
+    const searchKeyword = ref('');
+
+    /* ── FAQ 数据 (从 JSON 加载) ── */
+    const categories = reactive([]);
+    const faqLoading = ref(true);
+
+    Vue.onMounted(async () => {
+      try {
+        const res = await fetch('data/faq.json');
+        const data = await res.json();
+        data.categories.forEach((cat, ci) => {
+          cat.open = (ci === 0);
+          cat.items.forEach(qa => qa.open = false);
+          categories.push(cat);
+        });
+      } catch (e) {
+        vant.showToast('FAQ加载失败');
+      } finally {
+        faqLoading.value = false;
+      }
+    });
+
+    /* ── 搜索过滤 ── */
+    const filteredCategories = computed(() => {
+      if (!searchKeyword.value.trim()) return categories;
+      const kw = searchKeyword.value.trim().toLowerCase();
+      return categories.map(cat => ({
+        ...cat, open:true,
+        items: cat.items.filter(qa => qa.q.toLowerCase().includes(kw) || qa.a.toLowerCase().includes(kw))
+      })).filter(cat => cat.items.length > 0);
+    });
+
+    /* ── 方法 ── */
+    const toggleCat = (ci) => {
+      const cat = categories[ci];
+      cat.open = !cat.open;
+    };
+    const toggleQA = (cat, qi) => { cat.items[qi].open = !cat.items[qi].open; };
+    const onSearch = () => {};
+    const goBack = () => { history.back(); };
+    const goCS = () => goPage('messages.html');
+
+    return { searchKeyword,categories,filteredCategories,toggleCat,toggleQA,onSearch,goBack,goCS };
+  }
+}).use(vant).mount('#app');
+</script>
+</body>
+</html>

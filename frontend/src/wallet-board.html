@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 我的钱包</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" />
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   HalfCart H5 全局设计规范 V1.0
+   主色:#FF7D00 | 成功:#52C41A | 警示:#FF4D4F
+   ═══════════════════════════════════════════ */
+:root {
+  --primary:#FF7D00; --primary-light:rgba(255,125,0,.10);
+  --success:#52C41A; --danger:#FF4D4F;
+  --bg:#F5F7FA; --card-bg:rgba(255,255,255,.85);
+  --title:#1D2129; --body:#4E5969; --hint:#86909C;
+  --border:#E5E6EB;
+  --shadow:0 2px 12px rgba(0,0,0,.06); --shadow-lg:0 8px 28px rgba(0,0,0,.10);
+  --radius:12px; --radius-btn:24px;
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--body);-webkit-font-smoothing:antialiased;
+  display:flex;justify-content:center;min-height:100vh
+}
+#app{
+  width:100%;max-width:480px;min-height:100vh;background:var(--bg);
+  position:relative;overflow-x:hidden;
+  padding-top:56px;padding-bottom:24px
+}
+
+/* ── 顶部导航 ── */
+.nav-bar{
+  position:fixed;top:0;z-index:100;width:100%;max-width:480px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;height:56px;padding:0 16px;gap:12px;
+  background:rgba(255,255,255,.88);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,0,0,.04)
+}
+.nav-back{font-size:22px;color:var(--title);flex-shrink:0;cursor:pointer}
+.nav-title{flex:1;text-align:center;font-size:17px;font-weight:600;color:var(--title)}
+.nav-right{font-size:14px;color:var(--primary);font-weight:500;flex-shrink:0;cursor:pointer}
+
+/* ── 通用卡片 ── */
+.card{
+  margin:12px 16px 0;padding:16px;
+  background:var(--card-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.6)
+}
+.module-title{font-size:13px;font-weight:600;color:var(--hint);margin-bottom:12px;letter-spacing:.5px}
+
+/* ── 资产总览大卡片 ── */
+.overview-card{
+  margin:20px 16px 0;padding:24px 20px 20px;position:relative;overflow:hidden;
+  background:linear-gradient(155deg,rgba(255,255,255,.95) 0%,rgba(255,245,235,.9) 100%);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-radius:var(--radius);box-shadow:var(--shadow-lg);border:1px solid rgba(255,255,255,.8)
+}
+/* shimmer 微光动画 */
+.overview-card::before{
+  content:'';position:absolute;top:-40px;right:-30px;width:120px;height:120px;
+  border-radius:50%;background:rgba(255,125,0,.06);pointer-events:none
+}
+.overview-card.loading .shimmer-overlay{
+  position:absolute;top:0;left:0;right:0;bottom:0;
+  background:linear-gradient(90deg,transparent 30%,rgba(255,255,255,.5) 50%,transparent 70%);
+  animation:shimmer 1.8s infinite;z-index:2;pointer-events:none
+}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+.total-label{font-size:13px;color:var(--hint);margin-bottom:8px;text-align:center}
+.total-amount{
+  font-size:36px;font-weight:700;color:var(--primary);text-align:center;
+  line-height:1;margin-bottom:20px;letter-spacing:1px;font-family:"SF Mono","Menlo",monospace;
+  min-height:36px;position:relative;z-index:1
+}
+.total-amount .skeleton-block{
+  display:inline-block;width:160px;height:36px;border-radius:8px;
+  background:linear-gradient(90deg,#F0F1F3 30%,#E5E6EB 50%,#F0F1F3 70%);
+  background-size:200% 100%;animation:sk-shimmer 1.5s infinite
+}
+@keyframes sk-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+.balance-row{display:flex;position:relative;z-index:1}
+.balance-col{flex:1;text-align:center;position:relative}
+.balance-col:first-child::after{
+  content:'';position:absolute;right:0;top:8px;bottom:8px;width:1px;background:rgba(0,0,0,.06)
+}
+.balance-label{font-size:12px;color:var(--hint);margin-bottom:4px}
+.balance-value{font-size:20px;font-weight:600;color:var(--title);margin-bottom:2px;min-height:20px}
+.balance-value.avail{color:var(--primary)}
+.balance-sub{font-size:11px;color:var(--hint)}
+.skeleton-block-sm{
+  display:inline-block;width:80px;height:18px;border-radius:6px;
+  background:linear-gradient(90deg,#F0F1F3 30%,#E5E6EB 50%,#F0F1F3 70%);
+  background-size:200% 100%;animation:sk-shimmer 1.5s infinite;vertical-align:middle
+}
+.overview-footnote{text-align:center;margin-top:14px;padding-top:12px;
+  border-top:1px solid rgba(0,0,0,.04);font-size:11px;color:var(--hint);position:relative;z-index:1}
+
+/* ── 快捷操作 ── */
+.action-row{display:flex;gap:0}
+.action-item{
+  flex:1;display:flex;align-items:center;gap:8px;padding:10px 0;cursor:pointer;
+  transition:all .25s ease;position:relative
+}
+.action-item:active{opacity:.7}
+.action-item:first-child{border-right:1px solid rgba(0,0,0,.04);padding-right:12px}
+.action-item:last-child{padding-left:12px}
+.action-item.disabled{opacity:.4;pointer-events:none}
+.action-icon{
+  width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0
+}
+.action-icon.withdraw{background:var(--primary-light)}
+.action-icon.settings{background:rgba(134,144,156,.08)}
+.action-text{font-size:14px;font-weight:500;color:var(--title)}
+.action-text.primary-color{color:var(--primary)}
+.action-arrow{font-size:14px;color:var(--hint);margin-left:auto}
+.action-badge{
+  position:absolute;top:-2px;right:-6px;min-width:18px;height:18px;
+  border-radius:9px;background:var(--danger);color:#fff;font-size:10px;
+  font-weight:600;display:flex;align-items:center;justify-content:center;padding:0 5px
+}
+
+/* ── 最近流水 ── */
+.flow-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.flow-title{font-size:13px;font-weight:600;color:var(--hint);letter-spacing:.5px}
+.flow-more{font-size:12px;color:var(--hint);cursor:pointer;display:flex;align-items:center;gap:2px}
+.flow-item{display:flex;align-items:center;padding:10px 0;gap:10px;cursor:pointer;transition:all .25s ease}
+.flow-item:active{opacity:.7}
+.flow-item+.flow-item{border-top:1px solid rgba(0,0,0,.04)}
+.flow-icon{
+  width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0
+}
+.flow-icon.income{background:rgba(82,196,26,.10)}
+.flow-icon.outcome{background:rgba(255,77,79,.08)}
+.flow-icon.refund{background:rgba(22,93,255,.08)}
+.flow-icon.freeze{background:rgba(255,125,0,.08)}
+.flow-info{flex:1;min-width:0}
+.flow-name{font-size:14px;font-weight:500;color:var(--title);margin-bottom:2px}
+.flow-time{font-size:11px;color:var(--hint)}
+.flow-amount{font-size:15px;font-weight:600;flex-shrink:0}
+.flow-amount.plus{color:var(--success)}
+.flow-amount.minus{color:var(--danger)}
+
+/* ── 流水骨架屏 ── */
+.skeleton-flow{display:flex;align-items:center;padding:10px 0;gap:10px}
+.skeleton-flow+.skeleton-flow{border-top:1px solid rgba(0,0,0,.04)}
+.sk-circle{width:36px;height:36px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(90deg,#F0F1F3 30%,#E5E6EB 50%,#F0F1F3 70%);background-size:200% 100%;animation:sk-shimmer 1.5s infinite}
+.sk-line{height:14px;border-radius:7px;background:linear-gradient(90deg,#F0F1F3 30%,#E5E6EB 50%,#F0F1F3 70%);background-size:200% 100%;animation:sk-shimmer 1.5s infinite}
+.sk-line.wide{width:120px;margin-bottom:6px}
+.sk-line.narrow{width:70px}
+.sk-amount{width:64px;height:18px;border-radius:9px;flex-shrink:0;
+  background:linear-gradient(90deg,#F0F1F3 30%,#E5E6EB 50%,#F0F1F3 70%);background-size:200% 100%;animation:sk-shimmer 1.5s infinite}
+
+/* ── 空状态 ── */
+.empty-flow{text-align:center;padding:24px 0;color:var(--hint);font-size:13px}
+
+/* ── 提现说明 ── */
+.tip-title{font-size:14px;font-weight:600;color:var(--title);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.tip-item{display:flex;gap:8px;font-size:13px;color:var(--hint);line-height:1.7;padding:4px 0}
+.tip-num{flex-shrink:0;width:18px;height:18px;border-radius:50%;background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.tip-next{color:var(--primary);font-weight:500}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ═══ 顶部导航 ═══ -->
+  <div class="nav-bar">
+    <span class="nav-back" @click="goBack">←</span>
+    <span class="nav-title">我的钱包</span>
+    <span class="nav-right" @click="goFlowList">明细 ›</span>
+  </div>
+
+  <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
+  <!-- ═══ 资产总览 ═══ -->
+  <div class="overview-card" :class="{loading:loading}">
+    <div class="shimmer-overlay" v-if="loading"></div>
+    <div class="total-label">账户总资产（元）</div>
+    <div class="total-amount">
+      <span class="skeleton-block" v-if="loading"></span>
+      <span v-else>¥{{ displayTotal }}</span>
+    </div>
+    <div class="balance-row">
+      <div class="balance-col">
+        <div class="balance-label">可提现余额</div>
+        <div class="balance-value avail">
+          <span class="skeleton-block-sm" v-if="loading"></span>
+          <span v-else>¥{{ wallet.available }}</span>
+        </div>
+        <div class="balance-sub">可随时提现</div>
+      </div>
+      <div class="balance-col">
+        <div class="balance-label">冻结中</div>
+        <div class="balance-value">
+          <span class="skeleton-block-sm" v-if="loading"></span>
+          <span v-else>¥{{ wallet.frozen }}</span>
+        </div>
+        <div class="balance-sub">核销后解冻</div>
+      </div>
+    </div>
+    <div class="overview-footnote">🔒 资金由平台托管，保障交易安全</div>
+  </div>
+
+  <!-- ═══ 快捷操作 ═══ -->
+  <div class="card" style="padding:8px 16px;">
+    <div class="action-row">
+      <div class="action-item" :class="{disabled:!canWithdraw}" @click="goWithdraw">
+        <div class="action-icon withdraw">💰</div>
+        <span class="action-text primary-color">{{ canWithdraw ? '立即提现' : '暂无余额' }}</span>
+        <span class="action-arrow">›</span>
+      </div>
+      <div class="action-item" @click="goSettings">
+        <div class="action-icon settings">⚙</div>
+        <span class="action-text">收款设置</span>
+        <span class="action-badge" v-if="acctCount>0">{{ acctCount }}</span>
+        <span class="action-arrow">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 最近流水 ═══ -->
+  <div class="card">
+    <div class="flow-header">
+      <span class="flow-title">最近明细</span>
+      <span class="flow-more" @click="goFlowList">查看全部 ›</span>
+    </div>
+    <!-- 骨架屏 -->
+    <template v-if="loading">
+      <div class="skeleton-flow"><div class="sk-circle"></div><div class="flow-info"><div class="sk-line wide"></div><div class="sk-line narrow"></div></div><div class="sk-amount"></div></div>
+      <div class="skeleton-flow"><div class="sk-circle"></div><div class="flow-info"><div class="sk-line wide"></div><div class="sk-line narrow"></div></div><div class="sk-amount"></div></div>
+      <div class="skeleton-flow"><div class="sk-circle"></div><div class="flow-info"><div class="sk-line wide"></div><div class="sk-line narrow"></div></div><div class="sk-amount"></div></div>
+    </template>
+    <!-- 空状态 -->
+    <div class="empty-flow" v-if="!loading && recentFlows.length===0">暂无资金流水</div>
+    <!-- 流水列表 -->
+    <div class="flow-item" v-for="f in recentFlows" :key="f.id" @click="goFlowDetail(f)">
+      <div class="flow-icon" :class="f.iconClass">{{ f.icon }}</div>
+      <div class="flow-info">
+        <div class="flow-name">{{ f.name }}</div>
+        <div class="flow-time">{{ f.time }}</div>
+      </div>
+      <div class="flow-amount" :class="f.amount>0?'plus':'minus'">{{ f.amount>0?'+':''}}¥{{ Math.abs(f.amount).toFixed(2) }}</div>
+    </div>
+  </div>
+
+  <!-- ═══ 提现说明 ═══ -->
+  <div class="card">
+    <div class="tip-title">📋 提现说明</div>
+    <div class="tip-item"><span class="tip-num">1</span><span>可提现余额支持提现至支付宝或微信，预计 1-3 个工作日到账</span></div>
+    <div class="tip-item"><span class="tip-num">2</span><span>冻结资金为进行中订单的担保金，订单核销完成后自动解冻转入余额</span></div>
+    <div class="tip-item"><span class="tip-num">3</span><span>单笔提现最低 10 元，无手续费，<span class="tip-next">下一次打款日：{{ nextTuesday }}</span></span></div>
+  </div>
+  </van-pull-refresh>
+</div>
+
+<script>
+var app = Vue.createApp({
+  setup: function() {
+    requireAuth();
+    var goPage = window.goPage;
+
+    /* ── 状态 ── */
+    var loading = Vue.ref(true);
+    var refreshing = Vue.ref(false);
+    var wallet = Vue.reactive({ available: '0.00', frozen: '0.00' });
+    var displayTotal = Vue.ref('0.00');
+    var recentFlows = Vue.reactive([]);
+    var animTimer = null;
+
+    /* ── 计算 ── */
+    var canWithdraw = Vue.computed(function() {
+      return parseFloat(wallet.available) > 0;
+    });
+
+    /* ── 收款账户数量 ── */
+    var acctCount = Vue.ref(0);
+    async function updateAcctCount() {
+      try {
+        // 优先从 API 获取，兼容 localStorage 未迁移数据
+        var res = await request('/api/v1/user/payment-accounts');
+        acctCount.value = (res && res.data && res.data.total != null) ? res.data.total : 0;
+      } catch(e) {
+        // API 失败时回退 localStorage
+        try {
+          var raw = localStorage.getItem('halfcart_pay_accounts');
+          acctCount.value = raw ? JSON.parse(raw).length : 0;
+        } catch(e2) { acctCount.value = 0; }
+      }
+    }
+
+    /* ── 下一个周二 ── */
+    var nextTuesday = Vue.ref('');
+    function updateNextTuesday() {
+      var now = new Date();
+      var day = now.getDay(); // 0=Sun, 2=Tue
+      var diff = day <= 2 ? (2 - day) : (9 - day); // days until next Tue
+      if (day === 2 && now.getHours() >= 12) diff = 7; // after noon Tue → next week
+      var target = new Date(now);
+      target.setDate(now.getDate() + diff);
+      nextTuesday.value = (target.getMonth()+1) + '月' + target.getDate() + '日（周二）';
+    }
+
+    /* ── 数字递增动画 ── */
+    function animateNumber(targetVal) {
+      if (animTimer) cancelAnimationFrame(animTimer);
+      var start = parseFloat(displayTotal.value) || 0;
+      var end = targetVal;
+      if (Math.abs(end - start) < 0.01) { displayTotal.value = end.toFixed(2); return; }
+      var duration = 600;
+      var startTime = null;
+      function step(ts) {
+        if (!startTime) startTime = ts;
+        var progress = Math.min((ts - startTime) / duration, 1);
+        // ease-out
+        var eased = 1 - Math.pow(1 - progress, 3);
+        var current = start + (end - start) * eased;
+        displayTotal.value = current.toFixed(2);
+        if (progress < 1) { animTimer = requestAnimationFrame(step); }
+        else { displayTotal.value = end.toFixed(2); }
+      }
+      animTimer = requestAnimationFrame(step);
+    }
+
+    /* ── 拉取数据 ── */
+    function fetchWallet() {
+      loading.value = true;
+      request('/api/v1/user/home').then(function(res) {
+        if (res && res.code === 0 && res.data && res.data.profile) {
+          wallet.available = res.data.profile.walletBalance || '0.00';
+          wallet.frozen = res.data.profile.frozenBalance || '0.00';
+          var total = parseFloat(wallet.available) + parseFloat(wallet.frozen);
+          if (loading.value) { animateNumber(total); }
+          else { displayTotal.value = total.toFixed(2); }
+        }
+      }).catch(function() {});
+
+      request('/api/v1/user/balance-logs?page=1&page_size=3').then(function(res) {
+        if (res && res.code === 0 && res.data && res.data.items) {
+          recentFlows.splice(0, recentFlows.length);
+          res.data.items.forEach(function(l) {
+            var m = window.getFlowIcon(l.type);
+            var d = l.createdAt ? new Date(l.createdAt) : new Date();
+            recentFlows.push({
+              id: l.logNo || l.id,
+              name: l.remark || ('流水' + l.type),
+              time: (d.getMonth()+1) + '-' + ('0'+d.getDate()).slice(-2) + ' ' + ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2),
+              amount: parseFloat(l.amount || 0),
+              icon: m.icon, iconClass: m.cls
+            });
+          });
+        }
+      }).catch(function() {}).finally(function() {
+        loading.value = false; refreshing.value = false;
+      });
+    }
+
+    Vue.onMounted(function() {
+      updateAcctCount();
+      updateNextTuesday();
+      fetchWallet();
+    });
+
+    Vue.onUnmounted(function() {
+      if (animTimer) cancelAnimationFrame(animTimer);
+    });
+
+    /* ── 事件 ── */
+    var onRefresh = function() {
+      refreshing.value = true;
+      updateAcctCount();
+      fetchWallet();
+    };
+
+    var goBack = function() { history.back(); };
+    var goFlowList = function() { goPage('wallet-record.html'); };
+    var goFlowDetail = function(f) { goPage('wallet-record.html'); };
+    var goWithdraw = function() {
+      if (!canWithdraw.value) return;
+      goPage('withdraw-apply.html');
+    };
+    var goSettings = function() { goPage('wallet-settings.html'); };
+
+    return {
+      loading, refreshing, wallet, displayTotal, recentFlows, canWithdraw,
+      acctCount, nextTuesday,
+      onRefresh, goBack, goFlowList, goFlowDetail, goWithdraw, goSettings
+    };
+  }
+});
+app.use(vant).mount('#app');
+</script>
+</body>
+</html>

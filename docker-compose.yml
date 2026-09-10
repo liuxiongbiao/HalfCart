@@ -1,0 +1,382 @@
+# ===========================================================
+# 半仓智拼 (HalfCart) 全服务 Docker Compose 编排
+# ===========================================================
+# 对应底座设计 1.1-1.6
+#
+# 启动:  docker compose up -d
+# 停止:  docker compose down
+# 日志:  docker compose logs -f <service_name>
+#
+# YAML 规范:
+#   - 所有路径使用正斜杠 / (兼容 Windows Docker Desktop)
+#   - Docker Compose 变量替换 ${VAR:-default} 无需额外引号
+# ===========================================================
+
+# ══════════════════════════════════════════════
+# 网络配置 (底座设计 1.5)
+# ══════════════════════════════════════════════
+networks:
+  halfcart-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ══════════════════════════════════════════════
+# 服务定义
+# ══════════════════════════════════════════════
+services:
+
+  # ────────────────────────────────────────────
+  # MySQL 8.0 (底座设计 1.2)
+  # 用途: 核心交易数据持久化 (用户/订单/资金流水)
+  # PRD 5.3: SELECT FOR UPDATE 行级锁 + 原子运算
+  # ────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0.35
+    container_name: halfcart-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-halfcart_root_2024}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-halfcart}
+      MYSQL_USER: ${MYSQL_USER:-halfcart}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-halfcart123}
+    # ports:  # Windows WinNAT端口保留, 不暴露到宿主机; 后端通过内部网络 mysql:3306 连接
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+      - ./deploy/mysql/init:/docker-entrypoint-initdb.d
+      - ./deploy/mysql/conf.d:/etc/mysql/conf.d
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test:
+        - CMD
+        - mysqladmin
+        - ping
+        - -h
+        - localhost
+        - -u
+        - root
+        - '-p${MYSQL_ROOT_PASSWORD:-halfcart_root_2024}'
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - halfcart-net
+
+  # ────────────────────────────────────────────
+  # Redis 7 (底座设计 1.2)
+  # 用途: 分布式锁 / LBS缓存 / 验证码 / 接口限流
+  # PRD 4.3/4.5/5.1
+  # ────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    container_name: halfcart-redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - /usr/local/etc/redis/redis.conf
+    # ports:  # Windows WinNAT端口保留, 不暴露到宿主机; 后端通过内部网络 redis:6379 连接
+    volumes:
+      - ./data/redis:/data
+      - ./deploy/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - -a
+        - '${REDIS_PASSWORD:-halfcart_redis_2024}'
+        - ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - halfcart-net
+
+  # ────────────────────────────────────────────
+  # ElasticSearch 8 (底座设计 1.2)
+  # 用途: LBS地理空间搜索 / 全文检索 / 多条件筛选
+  # PRD 4.3 LBS雷达
+  # ────────────────────────────────────────────
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: halfcart-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=${ES_JAVA_OPTS:--Xms512m -Xmx512m}
+      # [安全] 开发环境关闭安全特性; 生产部署前必须启用 xpack.security
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+    ports:
+      # [安全] 生产部署前移除端口映射, 仅通过 Docker 内网访问
+      - '9292:9200'
+      - '9293:9300'
+    volumes:
+      - ./data/es:/usr/share/elasticsearch/data
+      - ./deploy/es/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'curl -s http://localhost:9200/_cluster/health | grep -qE ''green|yellow'''
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - halfcart-net
+
+  # ────────────────────────────────────────────
+  # RabbitMQ 3 (底座设计 1.2)
+  # 用途: AI任务异步解耦 / 订单通知 / 增量对账
+  # PRD 4.5/4.7/4.8/4.9
+  # ────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: halfcart-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-halfcart}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-halfcart123}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST:-/}
+    ports:
+      # [安全] 生产部署前移除端口映射, 仅通过 Docker 内网访问
+      # 15672 管理控制台暴露宿主机, 默认凭据 halfcart/halfcart123
+      - '6672:5672'
+      - '15672:15672'
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test:
+        - CMD
+        - rabbitmq-diagnostics
+        - check_port_connectivity
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - halfcart-net
+
+  # ────────────────────────────────────────────
+  # Backend (FastAPI) (底座设计 1.2)
+  # 用途: 全量业务API服务
+  # ────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: halfcart-backend:latest
+    pull_policy: build
+    container_name: halfcart-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=${MYSQL_USER:-halfcart}
+      - DB_PASSWORD=${MYSQL_PASSWORD:-halfcart123}
+      - DB_NAME=${MYSQL_DATABASE:-halfcart}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-halfcart_redis_2024}
+      - ES_HOST=http://elasticsearch:9200
+      - ES_USER=elastic
+      - ES_PASSWORD=${ES_PASSWORD:-elastic123}
+      - MQ_HOST=rabbitmq
+      - MQ_PORT=5672
+      - MQ_USER=${RABBITMQ_DEFAULT_USER:-halfcart}
+      - MQ_PASSWORD=${RABBITMQ_DEFAULT_PASS:-halfcart123}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-halfcart-jwt-secret}
+      - PHONE_ENCRYPTION_KEY=${PHONE_ENCRYPTION_KEY:-halfcart-aes-key-32bytes!!!}
+      - MOCK_PAYMENT=${MOCK_PAYMENT:-true}
+      - APP_ENV=${APP_ENV:-development}
+      - TEST_MODE=${TEST_MODE:-true}
+      - DIFY_API_BASE=${DIFY_API_BASE:-https://api.dify.ai/v1}
+      - DIFY_API_KEY=${DIFY_API_KEY:-}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-chat}
+      - SMS_ACCESS_KEY=${SMS_ACCESS_KEY:-}
+      - SMS_SECRET_KEY=${SMS_SECRET_KEY:-}
+      - SMS_SIGN_NAME=${SMS_SIGN_NAME:-半仓智拼}
+      - SMS_TEMPLATE_CODE=${SMS_TEMPLATE_CODE:-}
+      - DIFY_TEXT_PARSER_API_KEY=${DIFY_TEXT_PARSER_API_KEY:-}
+      - DIFY_TEXT_PARSER_WORKFLOW=${DIFY_TEXT_PARSER_WORKFLOW:-text-order-parser}
+      - DIFY_TEXT_PARSER_INPUT_VAR=${DIFY_TEXT_PARSER_INPUT_VAR:-user_input_text}
+      - DIFY_TEXT_PARSER_THRESHOLD=${DIFY_TEXT_PARSER_THRESHOLD:-0.6}
+      - DIFY_OCR_API_KEY=${DIFY_OCR_API_KEY:-}
+      - DIFY_OCR_WORKFLOW=${DIFY_OCR_WORKFLOW:-ocr-receipt-parser}
+      - DIFY_OCR_INPUT_VAR=${DIFY_OCR_INPUT_VAR:-receipt_image}
+      - DIFY_OCR_THRESHOLD=${DIFY_OCR_THRESHOLD:-0.75}
+      - AMAP_ENABLE=${AMAP_ENABLE:-true}
+      - AMAP_MOCK_ENABLED=${AMAP_MOCK_ENABLED:-true}
+      - AMAP_WEB_KEY=${AMAP_WEB_KEY:-}
+      - AMAP_COORD_TYPE=${AMAP_COORD_TYPE:-gcj02}
+      - AMAP_TIMEOUT=${AMAP_TIMEOUT:-3}
+      - AMAP_RETRY_TIMES=${AMAP_RETRY_TIMES:-1}
+      - AMAP_CACHE_TTL=${AMAP_CACHE_TTL:-86400}
+      - AMAP_FRAUD_SPEED_LIMIT=${AMAP_FRAUD_SPEED_LIMIT:-300}
+      - AMAP_FRAUD_ACCURACY_THRESHOLD=${AMAP_FRAUD_ACCURACY_THRESHOLD:-500}
+      - AMAP_RADIUS_LIMIT=${AMAP_RADIUS_LIMIT:-1500}
+      - AMAP_CIRCUIT_BREAKER_THRESHOLD=${AMAP_CIRCUIT_BREAKER_THRESHOLD:-10}
+      - AMAP_CIRCUIT_BREAKER_COOLDOWN=${AMAP_CIRCUIT_BREAKER_COOLDOWN:-300}
+      - WECHAT_MP_TOKEN=${WECHAT_MP_TOKEN:-half}
+      - WECHAT_MP_APPID=${WECHAT_MP_APPID:-}
+      - WECHAT_MP_SECRET=${WECHAT_MP_SECRET:-}
+    ports:
+      - '8000:8000'
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:8000/health
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - halfcart-net
+    volumes:
+      - ./frontend/src:/app/frontend/src:ro
+
+  # ────────────────────────────────────────────
+  # Consumer (MQ消费者 + 定时任务)
+  # 用途: 异步消费 MQ 消息 + 运行 APScheduler 定时任务
+  # PRD 3.5: 与 API 服务解耦, 独立进程/容器运行
+  # ────────────────────────────────────────────
+  consumer:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: halfcart-backend:latest
+    container_name: halfcart-consumer
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command:
+      - python
+      - -m
+      - app.tasks.main
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=${MYSQL_USER:-halfcart}
+      - DB_PASSWORD=${MYSQL_PASSWORD:-halfcart123}
+      - DB_NAME=${MYSQL_DATABASE:-halfcart}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-halfcart_redis_2024}
+      - ES_HOST=http://elasticsearch:9200
+      - ES_USER=elastic
+      - ES_PASSWORD=${ES_PASSWORD:-elastic123}
+      - MQ_HOST=rabbitmq
+      - MQ_PORT=5672
+      - MQ_USER=${RABBITMQ_DEFAULT_USER:-halfcart}
+      - MQ_PASSWORD=${RABBITMQ_DEFAULT_PASS:-halfcart123}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-halfcart-jwt-secret}
+      - PHONE_ENCRYPTION_KEY=${PHONE_ENCRYPTION_KEY:-halfcart-aes-key-32bytes!!!}
+      - MOCK_PAYMENT=${MOCK_PAYMENT:-true}
+      - APP_ENV=${APP_ENV:-development}
+      - TEST_MODE=${TEST_MODE:-true}
+      - DIFY_API_BASE=${DIFY_API_BASE:-https://api.dify.ai/v1}
+      - DIFY_API_KEY=${DIFY_API_KEY:-}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-chat}
+      - WECHAT_MP_TOKEN=${WECHAT_MP_TOKEN:-half}
+      - WECHAT_MP_APPID=${WECHAT_MP_APPID:-}
+      - WECHAT_MP_SECRET=${WECHAT_MP_SECRET:-}
+      - AMAP_ENABLE=${AMAP_ENABLE:-true}
+      - AMAP_MOCK_ENABLED=${AMAP_MOCK_ENABLED:-true}
+      - AMAP_WEB_KEY=${AMAP_WEB_KEY:-}
+      - AMAP_COORD_TYPE=${AMAP_COORD_TYPE:-gcj02}
+      - AMAP_TIMEOUT=${AMAP_TIMEOUT:-3}
+    networks:
+      - halfcart-net
+
+  # ────────────────────────────────────────────
+  # Frontend (Vue3 + Nginx) (底座设计 1.2)
+  # 用途: H5移动端SPA
+  # PRD 5.2: 兼容微信内置浏览器/Safari移动端/Chrome移动端
+  # ────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: halfcart-frontend:latest
+    pull_policy: build
+    container_name: halfcart-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - '3000:80'
+    volumes:
+      - ./frontend/src:/usr/share/nginx/html:ro
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -q
+        - --spider
+        - http://localhost:80/
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - halfcart-net
+
+  # ────────────────────────────────────────────
+  # Nginx 反向代理 (底座设计 1.2)
+  # ────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: halfcart-nginx
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    # 修复: nginx:alpine busybox wget 无 --spider, 用 -O /dev/null
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -O /dev/null http://127.0.0.1/health || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - halfcart-net

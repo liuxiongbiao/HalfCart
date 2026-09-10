@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 个人中心</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" /> 
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   HalfCart H5 全局设计规范 V1.0
+   主色:#FF7D00 | 背景:#F5F7FA | 圆角12px
+   ═══════════════════════════════════════════ */
+:root {
+  --primary: #FF7D00;
+  --primary-light: rgba(255,125,0,.10);
+  --bg: #F5F7FA;
+  --card-bg: rgba(255,255,255,.85);
+  --title: #1D2129;
+  --body: #4E5969;
+  --hint: #86909C;
+  --shadow: 0 2px 12px rgba(0,0,0,.06);
+  --radius: 12px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background: var(--bg); color: var(--body); -webkit-font-smoothing:antialiased;
+  display:flex; justify-content:center; min-height:100vh;
+}
+#app {
+  width:100%; max-width:480px; min-height:100vh; background:var(--bg);
+  position:relative; overflow-x:hidden;
+  padding-bottom:calc(72px + var(--safe-bottom));
+}
+
+/* ═══════════════════════════════════════════
+   1. 顶部用户信息区
+   ═══════════════════════════════════════════ */
+.profile-header {
+  position:relative; padding:40px 20px 28px;
+  background:linear-gradient(180deg, rgba(255,125,0,.18) 0%, rgba(255,157,48,.08) 60%, transparent 100%);
+  display:flex; align-items:center; gap:14px;
+}
+.profile-header::before {
+  content:''; position:absolute; inset:0;
+  background:rgba(255,255,255,.55); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+  mask-image:linear-gradient(to bottom,#000 40%,transparent 100%); -webkit-mask-image:linear-gradient(to bottom,#000 40%,transparent 100%);
+  z-index:0;
+}
+.profile-header > * { position:relative; z-index:1; }
+.avatar-circle {
+  width:64px; height:64px; border-radius:50%; flex-shrink:0;
+  background:linear-gradient(135deg,#FF9A3C,var(--primary));
+  display:flex; align-items:center; justify-content:center;
+  font-size:26px; color:#fff; font-weight:700;
+  box-shadow:0 4px 16px rgba(255,125,0,.28);
+}
+.user-info { flex:1; }
+.user-name { font-size:20px; font-weight:700; color:var(--title); margin-bottom:4px; }
+.user-credit { font-size:12px; color:var(--hint); }
+.user-credit span { color:var(--primary); font-weight:600; }
+.settings-btn {
+  font-size:22px; color:var(--hint); flex-shrink:0; padding:8px;
+  transition:all .25s ease;
+}
+.settings-btn:active { transform:scale(.9); color:var(--title); }
+
+/* ═══════════════════════════════════════════
+   2. 资金看板卡片
+   ═══════════════════════════════════════════ */
+.fund-card {
+  margin:-8px 16px 0; position:relative; z-index:2;
+  background:var(--card-bg); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius); box-shadow:var(--shadow); border:1px solid rgba(255,255,255,.6);
+  padding:20px 0 14px; overflow:hidden;
+}
+.fund-card::after {
+  content:''; position:absolute; left:50%; top:16px; bottom:16px; width:1px; background:rgba(0,0,0,.06);
+}
+.fund-row { display:flex; }
+.fund-col { flex:1; text-align:center; }
+.fund-label { font-size:12px; color:var(--hint); margin-bottom:6px; }
+.fund-value { font-size:22px; font-weight:600; color:var(--title); margin-bottom:8px; transition:all .4s ease; }
+.fund-value.primary-color { color:var(--primary); }
+.fund-action { font-size:12px; color:var(--primary); font-weight:500; cursor:pointer; }
+.fund-action.gray { color:var(--hint); }
+.fund-footer {
+  margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,0,0,.04);
+  text-align:center; font-size:11px; color:var(--hint);
+}
+
+/* ═══════════════════════════════════════════
+   3. 订单快捷入口
+   ═══════════════════════════════════════════ */
+.section-card {
+  margin:12px 16px 0;
+  background:var(--card-bg); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius); box-shadow:var(--shadow); border:1px solid rgba(255,255,255,.6);
+  padding:16px;
+}
+.section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.section-title { font-size:15px; font-weight:600; color:var(--title); }
+.section-more { font-size:12px; color:var(--hint); display:flex; align-items:center; gap:2px; }
+/* 图标行 */
+.order-icons { display:flex; justify-content:space-around; padding-bottom:10px; }
+.order-icon-item { text-align:center; position:relative; cursor:pointer; }
+.order-icon-item:active { transform:scale(.94); transition:all .25s ease; }
+.oi-circle {
+  width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+  font-size:22px; margin:0 auto 6px; background:#F7F8FA;
+}
+.oi-label { font-size:11px; color:var(--body); }
+.oi-badge {
+  position:absolute; top:-3px; right:-8px; min-width:17px; height:17px; line-height:17px;
+  border-radius:9px; background:#F53F3F; color:#fff; font-size:10px; font-weight:600; text-align:center; padding:0 4px;
+}
+/* 分割行 */
+.order-links { border-top:1px solid rgba(0,0,0,.04); padding-top:8px; }
+.order-link {
+  display:flex; align-items:center; justify-content:space-between; padding:10px 0; cursor:pointer;
+  transition:all .25s ease;
+}
+.order-link:active { opacity:.7; }
+.ol-left { font-size:14px; color:var(--body); }
+.ol-right { font-size:14px; color:var(--hint); }
+
+/* ═══════════════════════════════════════════
+   4. 功能列表
+   ═══════════════════════════════════════════ */
+.func-list { display:flex; flex-direction:column; }
+.func-item {
+  display:flex; align-items:center; padding:13px 0; cursor:pointer; transition:all .25s ease;
+}
+.func-item:active { opacity:.7; }
+.func-item + .func-item { border-top:1px solid rgba(0,0,0,.04); }
+.func-icon { width:32px; font-size:18px; text-align:center; margin-right:12px; flex-shrink:0; }
+.func-label { flex:1; font-size:14px; color:var(--body); }
+.func-arrow { font-size:14px; color:var(--hint); }
+
+/* ═══════════════════════════════════════════
+   5. 底部 Tab
+   ═══════════════════════════════════════════ */
+.tab-bar {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px;
+  display:flex; align-items:center; justify-content:space-around; padding:8px 0 calc(8px + var(--safe-bottom));
+  background:rgba(255,255,255,.92); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  border-top:1px solid rgba(0,0,0,.04); z-index:200;
+}
+.tab-item { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:10px; color:var(--hint); }
+.tab-item.active { color:var(--primary); }
+.tab-icon { font-size:22px; }
+.tab-publish {
+  width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg,#FF9A3C,var(--primary));
+  display:flex; align-items:center; justify-content:center; font-size:28px; color:#fff;
+  box-shadow:0 4px 16px rgba(255,125,0,.35); margin-top:-20px; transition:all .25s ease;
+}
+.tab-publish:active { transform:scale(.92); }
+
+/* 版本号 */
+.version-tag { text-align:center; padding:16px 0 8px; font-size:11px; color:var(--hint); }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ═══ 1. 顶部用户信息 ═══ -->
+  <div class="profile-header">
+    <div class="avatar-circle">{{ user.avatar }}</div>
+    <div class="user-info">
+      <div class="user-name">{{ user.nickname }}</div>
+      <div class="user-credit">信用分 <span>{{ user.credit }}</span></div>
+    </div>
+    <div class="settings-btn" @click="goSettings">⚙</div>
+  </div>
+
+  <!-- ═══ 2. 资金看板 ═══ -->
+  <div class="fund-card">
+    <div class="fund-row">
+      <div class="fund-col">
+        <div class="fund-label">可提现余额</div>
+        <div class="fund-value primary-color">¥{{ user.walletBalance }}</div>
+        <div class="fund-action" @click="goWithdraw">提现 →</div>
+      </div>
+      <div class="fund-col">
+        <div class="fund-label">冻结中</div>
+        <div class="fund-value">¥{{ user.frozenBalance }}</div>
+        <div class="fund-action gray" @click="goFundDetail">查看明细 →</div>
+      </div>
+    </div>
+    <div class="fund-footer">💡 核销完成后资金自动转入可提现余额</div>
+  </div>
+
+  <!-- ═══ 3. 订单快捷入口 ═══ -->
+  <div class="section-card">
+    <div class="section-header">
+      <span class="section-title">我的订单</span>
+      <span class="section-more" @click="goAllOrders">查看全部 ›</span>
+    </div>
+    <div class="order-icons">
+      <div class="order-icon-item" v-for="oi in orderIcons" :key="oi.key" @click="goOrderTab(oi.key)">
+        <div class="oi-circle">{{ oi.icon }}</div>
+        <div class="oi-label">{{ oi.label }}</div>
+        <span class="oi-badge" v-if="oi.badge>0">{{ oi.badge }}</span>
+      </div>
+    </div>
+    <div class="order-links">
+      <div class="order-link" @click="goOrderTab('created')">
+        <span class="ol-left">📋 我发起的</span><span class="ol-right">›</span>
+      </div>
+      <div class="order-link" @click="goOrderTab('joined')">
+        <span class="ol-left">🤝 我参与的</span><span class="ol-right">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 4. 功能列表 ═══ -->
+  <div class="section-card" style="margin-top:12px;">
+    <div class="func-list">
+      <div class="func-item" v-for="item in funcItems" :key="item.key" @click="goFunc(item.key)">
+        <span class="func-icon">{{ item.icon }}</span>
+        <span class="func-label">{{ item.label }}</span>
+        <span class="func-arrow">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 版本号 -->
+  <div class="version-tag">半仓智拼 V3.2.0</div>
+
+  <!-- ═══ 5. 底部 Tab ═══ -->
+  <div class="tab-bar">
+    <div class="tab-item" @click="goPage('index.html')"><span class="tab-icon">🏠</span><span>首页</span></div>
+    <div class="tab-item" @click="goPage('discover.html')"><span class="tab-icon">🔍</span><span>发现</span></div>
+    <div class="tab-publish" @click="goPage('publish.html')">+</div>
+    <div class="tab-item" @click="goPage('messages.html')"><span class="tab-icon">💬</span><span>消息</span></div>
+    <div class="tab-item active"><span class="tab-icon">👤</span><span>我的</span></div>
+  </div>
+</div>
+
+<script>
+var app = Vue.createApp({
+  setup: function () { requireAuth();
+    var goPage = window.goPage;
+    /* ── 用户数据 ── */
+    var storedUser = getUser();
+    var user = Vue.reactive(storedUser && storedUser.nickname ? storedUser : { avatar:'?', nickname:'加载中...', credit:0, walletBalance:'0.00', frozenBalance:'0.00' });
+
+    var orderIcons = Vue.reactive([
+      { key:'paying', icon:'💳', label:'待支付', badge:0 },
+      { key:'gathering', icon:'👥', label:'待成团', badge:0 },
+      { key:'deliver', icon:'📦', label:'待交接', badge:0 },
+      { key:'done', icon:'✅', label:'已完成', badge:0 },
+    ]);
+    var funcItems = [
+      { key:'wallet', icon:'💰', label:'我的钱包' }, { key:'address', icon:'📍', label:'收货地址' },
+      { key:'help', icon:'📖', label:'帮助中心' }, { key:'service', icon:'💬', label:'联系客服' }, { key:'about', icon:'ℹ️', label:'关于我们' },
+      { key:'logout', icon:'🚪', label:'退出登录' },
+    ];
+
+    function fetchProfile() {
+      request('/api/v1/user/home').then(function (res) {
+        if (res && res.code === 0 && res.data && res.data.profile) {
+          var p = res.data.profile;
+          Object.assign(user, { avatar: (p.nickname||'?')[0], nickname: p.nickname, credit: p.creditScore, walletBalance: p.walletBalance, frozenBalance: p.frozenBalance });
+          setUser(user);
+        }
+      }).catch(function () {});
+    }
+    Vue.onMounted(function () { fetchProfile(); });
+
+    var goSettings = function () { goPage('profile-edit.html'); };
+    var goWithdraw = function () { goPage('withdraw-apply.html'); };
+    var goFundDetail = function () { goPage('wallet-board.html'); };
+    var goAllOrders = function () { goPage('my-orders.html'); };
+    var goOrderTab = function (key) { goPage('my-orders.html', { tab: key }); };
+    var doLogout = function() { vant.showConfirmDialog({ title:'退出登录', message:'确定要退出登录吗？', confirmButtonText:'退出', confirmButtonColor:'#FF4D4F' }).then(function() { clearToken(); goPage('login.html'); }).catch(function(){}); };
+    var goFunc = function (key) {
+      var map = { wallet:'wallet-board.html', address:'address-list.html', help:'help-center.html', service:'help-center.html', about:'help-center.html', logout:'logout' }; if (key === 'logout') { doLogout(); return; }
+      goPage(map[key] || 'index.html');
+    };
+
+    return { user, orderIcons, funcItems, goSettings, goWithdraw, goFundDetail, goAllOrders, goOrderTab, goFunc, goPage, doLogout };
+  }
+});
+app.use(vant); app.mount('#app');
+</script>
+</body>
+</html>

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 注册</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" />
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+#app { background: #fff; min-height: 100vh; min-height: 100dvh; padding-top: 56px; padding-bottom: 40px; }
+.nav-bar { position: fixed; top: 0; z-index: 100; width: 100%; max-width: 480px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; height: 56px; padding: 0 16px; background: rgba(255,255,255,.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(0,0,0,.04); }
+.nav-back { font-size: 22px; color: #1D2129; cursor: pointer; flex-shrink: 0; }
+.nav-title { flex: 1; text-align: center; font-size: 17px; font-weight: 600; color: #1D2129; }
+.form-area { padding: 0 20px; margin-top: 12px; }
+.form-area .van-cell { padding: 12px 0; }
+.form-area .van-cell-group { background: transparent; }
+.field-hint { font-size: 12px; color: #F53F3F; min-height: 18px; padding: 2px 0 8px 16px; }
+.pwd-strength { display: flex; gap: 4px; margin: 0 0 4px 16px; }
+.pwd-strength-bar { flex: 1; height: 4px; border-radius: 2px; background: #F2F3F5; }
+.pwd-strength-bar.w1 { background: #F53F3F; } .pwd-strength-bar.w2 { background: #F59E0B; } .pwd-strength-bar.w3, .pwd-strength-bar.w4 { background: #10B981; }
+.pwd-label { font-size: 11px; padding: 2px 0 2px 16px; text-align: right; }
+.pwd-label.w1 { color: #F53F3F; } .pwd-label.w2 { color: #F59E0B; } .pwd-label.w3, .pwd-label.w4 { color: #10B981; }
+.match-ok { color: #10B981; font-size: 12px; padding: 0 16px; }
+.match-bad { color: #F53F3F; font-size: 12px; padding: 0 16px; }
+.submit-wrap { padding: 0 20px; margin-top: 16px; }
+.submit-btn { width: 100%; height: 48px; border-radius: 24px; border: none; background: linear-gradient(135deg, #FF9A3C, #FF7D00); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 16px rgba(255,125,0,.30); }
+.submit-btn:active { transform: scale(.97); }
+.submit-btn:disabled { background: #C9CDD4; box-shadow: none; pointer-events: none; }
+.agree-row { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 2px; margin-top: 20px; font-size: 12px; color: #86909C; padding: 0 20px; }
+.agree-link { color: #FF7D00; cursor: pointer; }
+.login-entry { text-align: center; margin-top: 16px; font-size: 13px; color: #86909C; }
+.login-entry span { color: #FF7D00; font-weight: 600; cursor: pointer; }
+.sheet { background: #fff; border-radius: 16px 16px 0 0; width: 100%; max-width: 480px; padding: 24px; max-height: 60vh; overflow-y: auto; }
+.sheet h3 { font-size: 16px; color: #1D2129; margin-bottom: 12px; text-align: center; }
+.sheet p { font-size: 13px; color: #4E5969; line-height: 1.8; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- 导航栏 -->
+  <div class="nav-bar">
+    <span class="nav-back" @click="goLogin">←</span>
+    <span class="nav-title">注册账号</span>
+  </div>
+
+  <!-- 表单 -->
+  <div class="form-area">
+    <van-form @submit="onSubmit">
+      <van-field v-model="form.username" label="用户名" placeholder="4-32位，字母开头，字母或数字" maxlength="32" :error="!!errors.username" @blur="check('username')" @input="errors.username=''"></van-field>
+      <div class="field-hint">{{ errors.username || '' }}</div>
+
+      <van-field v-model="form.phone" label="手机号" type="tel" placeholder="请输入11位手机号" maxlength="11" :error="!!errors.phone" @blur="check('phone')" @input="errors.phone=''">
+        <template #extra>
+          <van-button size="small" :disabled="codeCd>0" @click.prevent.stop="sendRegCode" type="primary"
+            style="background:#FF7D00;border-color:#FF7D00;border-radius:16px;font-size:12px">
+            {{ codeCd>0 ? codeCd+'s后重发' : (codeSent?'重新发送':'获取验证码') }}
+          </van-button>
+        </template>
+      </van-field>
+      <div class="field-hint">{{ errors.phone || '' }}</div>
+
+      <van-field v-model="form.code" label="验证码" type="tel" placeholder="6位验证码" maxlength="6" :error="!!errors.code" @input="errors.code=''"></van-field>
+      <div class="field-hint">{{ errors.code || '' }}</div>
+
+      <van-field v-model="form.email" label="邮箱" type="email" placeholder="example@domain.com" maxlength="50" :error="!!errors.email" @blur="check('email')" @input="errors.email=''"></van-field>
+      <div class="field-hint">{{ errors.email || '' }}</div>
+
+      <van-field v-model="form.password" label="密码" :type="showPwd?'text':'password'" placeholder="至少8位，包含字母和数字" maxlength="20" :error="!!errors.password" @blur="check('password')" @input="onPwdChange"></van-field>
+      <div class="field-hint">{{ errors.password || '' }}</div>
+
+      <div v-if="form.password">
+        <div class="pwd-strength">
+          <div class="pwd-strength-bar" v-for="i in 4" :key="i" :class="i<=pwdLevel?'w'+pwdLevel:''"></div>
+        </div>
+        <div class="pwd-label" :class="pwdLevel?'w'+pwdLevel:''">
+          {{ pwdLevel===1?'弱':pwdLevel===2?'中等':pwdLevel===3?'强':pwdLevel===4?'很强':'' }}
+          {{ pwdLevel===1?' - 建议增加特殊字符':pwdLevel===2?' - 可继续使用':pwdLevel>=3?' - 安全性高':'' }}
+        </div>
+      </div>
+
+      <van-field v-model="form.confirmPassword" label="确认密码" :type="showPwd?'text':'password'" placeholder="请再次输入密码" maxlength="20" :error="!!errors.confirmPassword" @blur="check('confirmPassword')" @input="onCpwdChange"></van-field>
+      <div class="field-hint">{{ errors.confirmPassword || '' }}</div>
+
+      <div v-if="form.confirmPassword&&form.password" :class="form.confirmPassword===form.password?'match-ok':'match-bad'">
+        {{ form.confirmPassword===form.password?'✓ 密码一致':'✗ 两次输入的密码不一致' }}
+      </div>
+
+      <div class="submit-wrap">
+        <button class="submit-btn" :disabled="loading" type="submit">{{ loading?'提交中...':'注册' }}</button>
+      </div>
+    </van-form>
+  </div>
+
+  <!-- 协议 -->
+  <div class="agree-row">
+    <van-checkbox v-model="agreed" icon-size="14px" checked-color="#FF7D00" @change="errors.agreement=''" />
+    <span>我已阅读并同意</span>
+    <span class="agree-link" @click="showAgreement('user')">《用户协议》</span><span>和</span>
+    <span class="agree-link" @click="showAgreement('privacy')">《隐私政策》</span>
+  </div>
+  <div class="field-hint" style="text-align:center" v-if="errors.agreement">{{ errors.agreement }}</div>
+
+  <div class="login-entry">已有账号？<span @click="goLogin">立即登录</span></div>
+
+  <!-- 协议弹窗 -->
+  <van-overlay :show="showSheet" @click="showSheet=false">
+    <div style="display:flex;align-items:flex-end;justify-content:center;height:100%" @click.stop>
+      <div class="sheet">
+        <h3>{{ sheetTitle }}</h3>
+        <p>{{ sheetContent }}</p>
+        <button class="submit-btn" style="margin-top:16px" @click.stop="showSheet=false">我知道了</button>
+      </div>
+    </div>
+  </van-overlay>
+</div>
+
+<script>
+var redirect = getQueryParam('redirect');
+
+var app = Vue.createApp({
+  setup: function () {
+    /* 已登录跳转 */
+    if (getToken()) {
+      setTimeout(function(){location.href=redirect?decodeURIComponent(redirect):'index.html'},300);
+    }
+
+    var form = Vue.reactive({
+      username: '', phone: '', email: '',
+      password: '', confirmPassword: '', code: '',
+    });
+
+    var errors = Vue.reactive({
+      username: '', phone: '', email: '', code: '',
+      password: '', confirmPassword: '', agreement: '',
+    });
+
+    var agreed = Vue.ref(false);
+    var showPwd = Vue.ref(false);
+    var loading = Vue.ref(false);
+    var showSheet = Vue.ref(false);
+    var sheetTitle = Vue.ref('');
+    var sheetContent = Vue.ref('');
+    var codeCd = Vue.ref(0);
+    var codeSent = Vue.ref(false);
+
+    /* 密码强度 */
+    var pwdLevel = Vue.computed(function(){
+      var p = form.password || '';
+      if (!p) return 0;
+      var s = 0;
+      if (p.length >= 8) s++;
+      if (p.length >= 12) s++;
+      if (/[a-zA-Z]/.test(p) && /\d/.test(p)) s++;
+      if (/[^a-zA-Z0-9]/.test(p)) s++;
+      return Math.min(4, s);
+    });
+
+    /* 校验 */
+    var RULES = {
+      username: { test: function(v){ return /^[a-zA-Z][a-zA-Z0-9]{3,31}$/.test(v||''); }, msg: '用户名必须为4-32位字母或数字，且以字母开头' },
+      phone:    { test: function(v){ return /^1[3-9]\d{9}$/.test(v||''); }, msg: '请输入正确的中国大陆手机号' },
+      email:    { test: function(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v||''); }, msg: '请输入正确的邮箱地址' },
+      password: { test: function(v){ return /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/.test(v||''); }, msg: '密码至少8位，需包含字母和数字' },
+      confirmPassword: { test: function(v){ return v === form.password; }, msg: '两次输入的密码不一致' },
+    };
+    var PLACEHOLDER = {
+      username: '请输入用户名', phone: '请输入手机号码', email: '请输入邮箱地址',
+      password: '请输入密码', confirmPassword: '请再次输入密码',
+    };
+
+    function check(field) {
+      var rule = RULES[field];
+      if (!rule) return true;
+      var v = form[field];
+      if (!v) { errors[field] = PLACEHOLDER[field] || ''; return false; }
+      if (!rule.test(v)) { errors[field] = rule.msg; return false; }
+      errors[field] = ''; return true;
+    }
+
+    function onPwdChange() {
+      errors.password = '';
+      if (form.confirmPassword) check('confirmPassword');
+    }
+    function onCpwdChange() {
+      errors.confirmPassword = '';
+      if (form.confirmPassword && form.password) check('confirmPassword');
+    }
+
+    /* 发送注册验证码 */
+    function sendRegCode() {
+      if (codeCd.value > 0) return;
+      if (!/^1[3-9]\d{9}$/.test(form.phone)) { errors.phone = '请输入正确的手机号'; return; }
+      request('/api/v1/auth/send-login-code', { method:'POST', body:{phone:form.phone}})
+        .then(function(){ vant.showToast('验证码已发送'); codeSent.value = true; startCd(); })
+        .catch(function(e){ vant.showToast(e.message||'发送失败'); });
+    }
+    function startCd(){ codeCd.value=60; var t=setInterval(function(){codeCd.value--;if(codeCd.value<=0)clearInterval(t)},1000); }
+
+    /* 提交注册 */
+    function onSubmit(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      if (loading.value) return;
+      if (!agreed.value) { errors.agreement = '请先同意用户协议和隐私政策'; return; }
+      errors.agreement = '';
+
+      /* 校验所有字段 */
+      var fields = ['username','phone','email','password','confirmPassword'];
+      var allOK = true, firstBad = null;
+      fields.forEach(function(f){
+        if (!check(f)) { allOK = false; if (!firstBad) firstBad = f; }
+      });
+      /* 额外校验验证码 */
+      if (!form.code || !/^\d{6}$/.test(form.code)) {
+        errors.code = '请输入6位验证码'; allOK = false;
+        if (!firstBad) firstBad = 'code';
+      }
+
+      if (!allOK) {
+        if (firstBad) {
+          var el = document.querySelector('[name="'+firstBad+'"] input, [name="'+firstBad+'"]');
+          if (el && el.focus) setTimeout(function(){ el.focus(); }, 80);
+        }
+        return;
+      }
+
+      loading.value = true;
+      /* 调用后端注册 API */
+      request('/api/v1/auth/register', { method:'POST', body:{
+        username: form.username,
+        phone: form.phone,
+        password: form.password,
+        confirm_password: form.confirmPassword,
+        code: form.code,
+        nickname: form.nickname || ('用户'+form.phone.slice(-4)),
+      }}).then(function(res){
+        if (res && res.code === 0) {
+          // 后端返回 token pair，注册即登录
+          if (res.data && res.data.accessToken) {
+            setToken(res.data.accessToken);
+            setRefreshToken(res.data.refreshToken);
+            setUser({ userId: res.data.userId, nickname: res.data.nickname });
+            vant.showSuccessToast('注册成功');
+            setTimeout(function(){
+              var target = redirect || 'index.html';
+              goPage(target, {});
+            }, 800);
+          } else {
+            vant.showSuccessToast('注册成功，请登录');
+            setTimeout(function(){
+              goPage('login.html', redirect ? { redirect: redirect } : {});
+            }, 800);
+          }
+        } else {
+          vant.showToast((res && res.message) || '注册失败');
+          loading.value = false;
+        }
+      }).catch(function(){
+        loading.value = false;
+      });
+    }
+
+    /* 协议 — 从 JSON 加载 */
+    var agreementsCache = null;
+    async function showAgreement(type) {
+      sheetTitle.value = type==='user'?'用户协议':'隐私政策';
+      if (!agreementsCache) {
+        try {
+          var res = await fetch('data/agreements.json');
+          agreementsCache = await res.json();
+        } catch(e) {
+          sheetContent.value = '协议加载失败，请稍后重试';
+          showSheet.value = true;
+          return;
+        }
+      }
+      sheetContent.value = agreementsCache[type] || '暂无内容';
+      showSheet.value = true;
+    }
+
+    /* 跳转登录 */
+    function goLogin() {
+      goPage('login.html', redirect ? { redirect: redirect } : {});
+    }
+
+    return {
+      form, errors, agreed, showPwd, loading, pwdLevel,
+      showSheet, sheetTitle, sheetContent,
+      codeCd, codeSent,
+      check, onPwdChange, onCpwdChange, sendRegCode, onSubmit,
+      showAgreement, goLogin,
+    };
+  }
+});
+app.use(vant); app.mount('#app');
+</script>
+</body>
+</html>

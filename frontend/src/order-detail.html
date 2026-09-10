@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 订单详情</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" />
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+:root {
+  --primary:#FF7D00; --primary-light:rgba(255,125,0,.1); --primary-gradient:linear-gradient(135deg,#FF9A3C,#FF7D00);
+  --success:#52C41A; --danger:#FF4D4F; --bg:#F5F7FA; --card-bg:rgba(255,255,255,.85);
+  --title:#1D2129; --body:#4E5969; --hint:#86909C; --border-light:#F2F3F5;
+  --shadow:0 2px 12px rgba(0,0,0,.06); --radius:12px; --radius-sm:8px; --radius-btn:24px;
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--body);-webkit-font-smoothing:antialiased;display:flex;justify-content:center;min-height:100vh}
+#app{width:100%;max-width:480px;min-height:100vh;background:var(--bg);position:relative;overflow-x:hidden;padding-top:56px;padding-bottom:90px}
+
+/* 导航栏 */
+.nav-bar{position:fixed;top:0;z-index:100;width:100%;max-width:480px;left:50%;transform:translateX(-50%);display:flex;align-items:center;height:56px;padding:0 16px;gap:12px;background:rgba(255,255,255,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,0,0,.04)}
+.nav-back{font-size:22px;color:var(--title);flex-shrink:0;cursor:pointer}
+.nav-title{flex:1;text-align:center;font-size:17px;font-weight:600;color:var(--title)}
+
+/* 卡片基础 */
+.card{margin:10px 16px 0;padding:16px;background:var(--card-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:var(--radius);box-shadow:var(--shadow)}
+
+/* ── 步骤条 ── */
+.steps-bar{display:flex;align-items:center;justify-content:center;gap:0;padding:14px 16px 10px}
+.step-item{display:flex;align-items:center;gap:0;flex-shrink:0}
+.step-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;transition:all .3s}
+.step-dot.done{background:#E8F8E0;color:var(--success)}
+.step-dot.current{background:var(--primary);color:#fff;box-shadow:0 0 0 4px var(--primary-light)}
+.step-dot.future{background:var(--border-light);color:#C0C4CC}
+.step-dot.cancelled{background:#F2F3F5;color:#C0C4CC;text-decoration:line-through}
+.step-line{width:28px;height:2px;flex-shrink:0;transition:all .3s}
+.step-line.done{background:var(--success)}
+.step-line.future{background:var(--border-light)}
+.step-label{font-size:11px;margin-top:4px;text-align:center;white-space:nowrap}
+.step-label.done{color:var(--success)}
+.step-label.current{color:var(--primary);font-weight:600}
+.step-label.future{color:var(--hint)}
+
+/* ── 倒计时条 ── */
+.countdown-bar{margin:0 16px;padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}
+.countdown-bar.gathering{background:linear-gradient(135deg,#FFF7E6,#FFEDCC);color:#D46B08;border:1px solid #FFD591}
+.countdown-bar.purchasing{background:linear-gradient(135deg,#E6F7FF,#D6EFFF);color:#096DD9;border:1px solid #91D5FF}
+.countdown-bar.delivering{background:linear-gradient(135deg,#F0FFF0,#E0FFE0);color:#237804;border:1px solid #B7EB8F}
+.countdown-bar.finished{background:#F5F7FA;color:var(--hint)}
+.countdown-bar.cancelled{background:#FFF1F0;color:var(--danger)}
+
+/* ── 商品卡片 ── */
+.goods-card{display:flex;gap:14px;align-items:flex-start}
+.goods-img{width:64px;height:64px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0}
+.goods-img.food{background:linear-gradient(135deg,#FFF3E0,#FFE0B2)}
+.goods-img.fresh{background:linear-gradient(135deg,#E8F5E9,#C8E6C9)}
+.goods-img.daily{background:linear-gradient(135deg,#E3F2FD,#BBDEFB)}
+.goods-img.snack{background:linear-gradient(135deg,#FCE4EC,#F8BBD0)}
+.goods-img.drink{background:linear-gradient(135deg,#F3E5F5,#E1BEE7)}
+.goods-img.default{background:linear-gradient(135deg,#F5F5F5,#E8E8E8)}
+.goods-info{flex:1;min-width:0}
+.goods-name{font-size:16px;font-weight:600;color:var(--title);line-height:1.4;margin-bottom:4px}
+.goods-meta{font-size:12px;color:var(--hint);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.goods-meta .tag{display:inline-block;padding:1px 6px;border-radius:4px;background:var(--border-light);color:var(--hint);margin-right:4px}
+.price-main{display:flex;align-items:baseline;gap:2px}
+.price-sym{font-size:13px;font-weight:600;color:var(--primary)}
+.price-val{font-size:24px;font-weight:700;color:var(--primary);line-height:1}
+.price-unit{font-size:12px;color:var(--hint);margin-left:2px}
+.price-save{font-size:12px;color:var(--success);margin-top:2px}
+.price-save .orig{color:var(--hint);text-decoration:line-through;margin-right:4px}
+
+/* ── 进度卡片 ── */
+.progress-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.progress-label{font-size:13px;color:var(--body);display:flex;align-items:center;gap:4px}
+.progress-count{font-size:13px;font-weight:600;color:var(--title)}
+.progress-bar-wrap{height:8px;border-radius:4px;background:var(--border-light);overflow:hidden;margin-bottom:6px}
+.progress-fill{height:100%;border-radius:4px;background:var(--primary-gradient);transition:width .6s ease}
+.progress-urgent{font-size:12px;color:var(--danger);font-weight:500;margin-bottom:10px}
+.avatar-stack{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin-bottom:10px}
+.avatar-item{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:600;margin-left:-6px;border:2px solid #fff;position:relative;flex-shrink:0}
+.avatar-item:first-child{margin-left:0}
+.avatar-item .paid-dot{position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:var(--success);border:1.5px solid #fff}
+.avatar-more{width:32px;height:32px;border-radius:50%;background:var(--border-light);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--hint);margin-left:-6px;border:2px solid #fff;flex-shrink:0}
+.creator-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--body)}
+.creator-row .c-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600;flex-shrink:0}
+.creator-row .c-credit{font-size:11px;color:var(--primary);background:var(--primary-light);padding:1px 6px;border-radius:4px}
+
+/* ── 地点 + 订单信息卡片 ── */
+.loc-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
+.loc-icon{font-size:16px;flex-shrink:0;margin-top:2px}
+.loc-addr{font-size:14px;color:var(--body);flex:1}
+.order-meta-row{font-size:12px;color:var(--hint);display:flex;gap:12px}
+
+/* ── 底部操作栏 ── */
+.action-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:100;padding:10px 16px calc(10px + var(--safe-bottom));background:rgba(255,255,255,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(0,0,0,.05);display:flex;gap:10px}
+.btn{flex:1;height:44px;border-radius:var(--radius-btn);font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;border:none;gap:4px}
+.btn:active{transform:scale(.96)}
+.btn-primary{background:var(--primary-gradient);color:#fff;box-shadow:0 4px 16px rgba(255,125,0,.28)}
+.btn-outline{background:#fff;color:var(--primary);border:1px solid var(--primary)}
+.btn-danger{background:#fff;color:var(--danger);border:1px solid rgba(255,77,79,.25)}
+.btn-ghost{background:var(--border-light);color:var(--body)}
+
+/* ── 骨架屏 ── */
+.skeleton{background:linear-gradient(90deg,#eee 25%,#f5f5f5 50%,#eee 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-steps{width:240px;height:36px;margin:14px auto 10px}
+.skel-countdown{width:80%;height:38px;margin:0 auto 10px;border-radius:var(--radius-sm)}
+.skel-goods{display:flex;gap:14px;margin:10px 16px 0;padding:16px;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow)}
+.skel-gimg{width:64px;height:64px;border-radius:var(--radius-sm);flex-shrink:0}
+.skel-ginfo{flex:1}.skel-gtitle{width:70%;height:18px;margin-bottom:8px}
+.skel-gmeta{width:45%;height:13px;margin-bottom:8px}.skel-gprice{width:35%;height:24px}
+.skel-progress{padding:16px;margin:10px 16px 0;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow)}
+.skel-phead{width:50%;height:14px;margin-bottom:10px}
+.skel-pbar{width:100%;height:8px;border-radius:4px;margin-bottom:8px}
+.skel-pavatars{width:60%;height:32px}.skel-loc{width:80%;height:40px;margin:10px 16px 0}
+
+/* ── 核销码弹窗 ── */
+.code-display{font-size:36px;font-weight:700;letter-spacing:10px;color:var(--primary);padding:16px 0;font-family:"SF Mono","Menlo",monospace;text-align:center}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- 导航栏 -->
+  <div class="nav-bar">
+    <span class="nav-back" @click="goBack">←</span>
+    <span class="nav-title">订单详情</span>
+  </div>
+
+  <!-- ═══ 骨架屏加载态 ═══ -->
+  <template v-if="loading">
+    <div class="skel-steps skeleton"></div>
+    <div class="skel-countdown skeleton"></div>
+    <div class="skel-goods">
+      <div class="skel-gimg skeleton"></div>
+      <div class="skel-ginfo">
+        <div class="skel-gtitle skeleton"></div>
+        <div class="skel-gmeta skeleton"></div>
+        <div class="skel-gprice skeleton"></div>
+      </div>
+    </div>
+    <div class="skel-progress">
+      <div class="skel-phead skeleton"></div>
+      <div class="skel-pbar skeleton"></div>
+      <div class="skel-pavatars skeleton"></div>
+    </div>
+    <div style="margin:10px 16px 0;padding:14px 16px;background:#fff;border-radius:12px;box-shadow:var(--shadow)">
+      <div class="skel-phead skeleton"></div>
+      <div class="skel-gmeta skeleton" style="margin-top:6px"></div>
+    </div>
+  </template>
+
+  <!-- ═══ 内容区 ═══ -->
+  <template v-if="!loading">
+    <!-- ── 步骤进度条 ── -->
+    <div class="steps-bar" v-if="!isCancelled">
+      <div style="display:flex;align-items:center;gap:0">
+        <template v-for="(s, i) in steps" :key="'s'+i">
+          <div class="step-dot" :class="s.done?'done':(s.current?'current':'future')">
+            {{ s.done ? '✓' : (s.current ? '●' : '') }}
+          </div>
+          <div class="step-line" v-if="i < steps.length-1" :class="s.done?'done':'future'"></div>
+        </template>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:4px">
+        <span v-for="(s, i) in steps" :key="'sl'+i" class="step-label" :class="s.done?'done':(s.current?'current':'future')" :style="{width:(isSpot?'70px':'48px'),textAlign:'center'}">{{ s.label }}</span>
+      </div>
+    </div>
+    <!-- 已取消状态 -->
+    <div class="steps-bar" v-else>
+      <span style="font-size:13px;color:var(--hint)">此拼单已取消</span>
+    </div>
+
+    <!-- ── 动态倒计时条 ── -->
+    <div class="countdown-bar" :class="countdownClass">{{ countdownText }}</div>
+
+    <!-- ── 商品信息卡片 ── -->
+    <div class="card goods-card">
+      <div class="goods-img" :class="goodsImgClass">{{ goodsImgEmoji }}</div>
+      <div class="goods-info">
+        <div class="goods-name">{{ order.goodsName || '--' }}</div>
+        <div class="goods-meta">
+          <span class="tag" v-if="order.purchaseChannel">{{ order.purchaseChannel }}</span>
+          <span v-if="order.goodsDesc">{{ order.goodsDesc }}</span>
+        </div>
+        <div class="price-main">
+          <span class="price-sym">¥</span>
+          <span class="price-val">{{ order.pricePerPerson || '--' }}</span>
+          <span class="price-unit">/人</span>
+        </div>
+        <div class="price-save" v-if="showPriceSave">
+          <span class="orig">原价¥{{ order.originalPrice }}</span>拼单省<span style="color:var(--success);font-weight:600">¥{{ priceSaved }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 拼单进度卡片 ── -->
+    <div class="card" v-if="!isSpot">
+      <div class="progress-header">
+        <span class="progress-label">👥 拼单进度</span>
+        <span class="progress-count">{{ order.currentPeople || 0 }}/{{ order.totalPeople || 0 }} 人</span>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-fill" :style="{width: progressPct+'%'}"></div>
+      </div>
+      <div class="progress-urgent" v-if="order.status===0 && (order.currentPeople||0) < (order.totalPeople||0)">
+        🔥 还差 {{ remainingPeople }} 人成团！
+      </div>
+      <!-- 参团人头像堆叠 -->
+      <div class="avatar-stack" v-if="participants.length>0">
+        <div class="avatar-item" v-for="(p,i) in displayParticipants" :key="p.userId"
+             :style="{background: avatarColor(p.userId),zIndex:10-i}">
+          {{ (p.nickname||'?')[0] }}
+          <span class="paid-dot" v-if="p.payStatus===1"></span>
+        </div>
+        <div class="avatar-more" v-if="participants.length > 5">+{{ participants.length - 5 }}</div>
+      </div>
+      <!-- 团长信息 -->
+      <div class="creator-row" v-if="creatorInfo.userId">
+        <div class="c-avatar" :style="{background: avatarColor(creatorInfo.userId)}">{{ (creatorInfo.nickname||'?')[0] }}</div>
+        <span>团长 · {{ creatorInfo.nickname || '--' }}</span>
+        <span class="c-credit">信用{{ order.creditScore || 100 }}</span>
+      </div>
+    </div>
+    <!-- 现货订单卡片 -->
+    <div class="card" v-else>
+      <div style="font-size:13px;color:var(--hint);display:flex;align-items:center;gap:6px">
+        <span style="background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">🔥 现货</span>
+        可直接购买，无需等待成团
+      </div>
+    </div>
+
+    <!-- ── 交接地点 ── -->
+    <div class="card" v-if="order.meetLocation">
+      <div class="loc-row">
+        <span class="loc-icon">📍</span>
+        <span class="loc-addr">{{ order.meetLocation }}</span>
+      </div>
+      <div class="order-meta-row">
+        <span>订单号 {{ order.orderNo || '--' }}</span>
+        <span>{{ formatDate(order.createdAt) }}</span>
+      </div>
+    </div>
+  </template>
+
+  <!-- ═══ 底部操作栏 ═══ -->
+  <div class="action-bar" v-if="!loading">
+    <!-- 团长操作栏 -->
+    <template v-if="userRole === 'leader'">
+      <template v-if="order.status===0">
+        <button class="btn btn-danger" @click="onDisband">取消拼单</button>
+        <button class="btn btn-primary" @click="onShare">📤 分享邀请</button>
+      </template>
+      <template v-else-if="order.status===1">
+        <button class="btn btn-primary" @click="onMarkPurchased">✅ 已买到</button>
+      </template>
+      <template v-else-if="order.status===2">
+        <button class="btn btn-primary" @click="showVerifyInput=true">🔑 验证核销码</button>
+        <button v-if="isSpot && (order.currentPeople||0) <= 1" class="btn btn-ghost" style="color:var(--danger)" @click="onDisband">取消拼单</button>
+      </template>
+      <template v-else-if="order.status===3">
+        <button class="btn btn-primary" @click="goPage('wallet-board.html')">💰 查看钱包</button>
+      </template>
+      <template v-else-if="order.status===4">
+        <button class="btn btn-ghost" @click="goBack">返回</button>
+      </template>
+    </template>
+
+    <!-- 拼友操作栏 -->
+    <template v-else-if="userRole === 'participant'">
+      <template v-if="order.status===0">
+        <button class="btn btn-ghost" style="color:var(--danger)" @click="onQuit">退出拼单</button>
+        <button class="btn btn-primary" @click="onShare">📤 分享邀请</button>
+      </template>
+      <template v-else-if="order.status===1">
+        <button class="btn btn-primary" @click="onRefund">申请退款</button>
+        <button class="btn btn-outline" @click="goPage('chat-detail.html',{id:orderId})">💬 联系团长</button>
+      </template>
+      <template v-else-if="order.status===2 && isSpot">
+        <template v-if="hasBoughtSpot">
+          <button class="btn btn-primary" @click="showCode=true">🔑 查看核销码</button>
+        </template>
+        <template v-else>
+          <button class="btn btn-primary" @click="onBuySpot">⚡ 立即购买</button>
+        </template>
+      </template>
+      <template v-else-if="order.status===2">
+        <button class="btn btn-primary" @click="showCode=true">🔑 查看核销码</button>
+        <button class="btn btn-ghost" style="color:var(--danger)" @click="onDispute">申请售后</button>
+      </template>
+      <template v-else-if="order.status===3">
+        <button class="btn btn-primary" @click="vant.showToast('评价功能开发中')">⭐ 去评价</button>
+      </template>
+    </template>
+
+    <!-- 路人操作栏 -->
+    <template v-else>
+      <template v-if="order.status===0">
+        <button class="btn btn-primary" @click="goPay">💰 立即参团</button>
+      </template>
+      <template v-else-if="order.status===2 && order.isSpot && !hasBoughtSpot">
+        <button class="btn btn-primary" @click="onBuySpot">⚡ 立即购买</button>
+      </template>
+    </template>
+  </div>
+
+  <!-- ═══ 团长弹窗：输入核销码验证 (PRD 4.5) ═══ -->
+  <van-overlay :show="showVerifyInput" @click="showVerifyInput=false" z-index="1000">
+    <div style="display:flex;align-items:center;justify-content:center;height:100%">
+      <div style="background:#fff;border-radius:16px;padding:28px 24px;width:300px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.15)" @click.stop>
+        <div style="font-size:32px;margin-bottom:8px">🔑</div>
+        <div style="font-size:15px;font-weight:600;color:var(--title);margin-bottom:16px">验证核销码</div>
+        <input type="text" v-model="verifyInput" maxlength="6" placeholder="请输入6位核销码"
+          style="width:100%;height:48px;border:2px solid var(--primary);border-radius:12px;text-align:center;font-size:24px;letter-spacing:8px;outline:none;font-family:monospace" />
+        <button style="margin-top:16px;width:100%;height:42px;border-radius:21px;border:none;background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer"
+          @click="onVerifyCode">确认验证</button>
+        <div style="font-size:12px;color:var(--hint);margin-top:8px">拼友线下出示核销码，输入验证完成交易</div>
+      </div>
+    </div>
+  </van-overlay>
+
+  <!-- ═══ 拼友弹窗：展示核销码 (PRD 4.4) ═══ -->
+  <van-overlay :show="showCode" @click="showCode=false" z-index="1000">
+    <div style="display:flex;align-items:center;justify-content:center;height:100%">
+      <div style="background:#fff;border-radius:16px;padding:28px 24px;width:300px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.15)" @click.stop>
+        <div style="font-size:32px;margin-bottom:8px">🔑</div>
+        <div style="font-size:15px;font-weight:600;color:var(--title);margin-bottom:16px">我的核销码</div>
+        <div class="code-display">{{ verifyCode || '------' }}</div>
+        <div style="font-size:12px;color:var(--hint);margin-top:8px">请将此码出示给团长完成核销</div>
+        <button style="margin-top:20px;width:100%;height:42px;border-radius:21px;border:none;background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer" @click.stop="showCode=false">我知道了</button>
+      </div>
+    </div>
+  </van-overlay>
+</div>
+
+<script>
+var orderId = getQueryParam('id') || '1';
+var CAT_EMOJI = { food:'🍔', fresh:'🥬', daily:'📦', snack:'🍿', drink:'🧃' };
+
+var app = Vue.createApp({
+  setup: function () {
+    var goPage = window.goPage;
+    var order = Vue.reactive({});
+    var participants = Vue.ref([]);
+    var isCreator = Vue.computed(function() {
+        var u = getUser();
+        return !!(u && u.userId === order.creatorId);
+    });
+    var isParticipant = Vue.computed(function() {
+        return order.userRole === 2;
+    });
+    var userRole = Vue.computed(function() {
+        if (isCreator.value) return 'leader';
+        if (isParticipant.value) return 'participant';
+        return 'stranger';
+    });
+    var showCode = Vue.ref(false);
+    var showVerifyInput = Vue.ref(false);
+    var verifyCode = Vue.ref('');
+    var verifyInput = Vue.ref('');
+    var loading = Vue.ref(true);
+    var countdownText = Vue.ref('');
+    var countdownClass = Vue.ref('');
+    var countdownTimer = null;
+
+    /* ── 计算属性 ── */
+    var stepStatus = Vue.computed(function () {
+      return order.status != null ? order.status : -1;
+    });
+    var isSpot = Vue.computed(function () { return !!(order.isSpot); });
+    var isCancelled = Vue.computed(function () { return order.status === 4; });
+    var steps = Vue.computed(function () {
+      if (isSpot.value) {
+        return [
+          { label:'待交接', done: order.status>=3, current: order.status===2 },
+          { label:'已完成', done: order.status>=3, current: false },
+        ];
+      }
+      return [
+        { label:'集资', done: order.status>=1, current: order.status===0 },
+        { label:'采购', done: order.status>=2, current: order.status===1 },
+        { label:'交接', done: order.status>=3, current: order.status===2 },
+        { label:'完成', done: order.status>=3, current: false },
+      ];
+    });
+    var remainingPeople = Vue.computed(function () {
+      return Math.max(0, (order.totalPeople||0) - (order.currentPeople||0));
+    });
+    var progressPct = Vue.computed(function () {
+      if (!order.totalPeople || order.totalPeople===0) return 0;
+      return Math.min(100, (order.currentPeople||0) / order.totalPeople * 100);
+    });
+    var hasBoughtSpot = Vue.computed(function () {
+      if (!isSpot.value) return false;
+      var u = getUser();
+      if (!u) return false;
+      return participants.value.some(function(p) {
+        return p.userId === u.userId && p.role === 2 && p.payStatus === 1;
+      });
+    });
+    var displayParticipants = Vue.computed(function () {
+      return participants.value.slice(0, 5);
+    });
+    var creatorInfo = Vue.computed(function () {
+      var found = participants.value.filter(function(p){ return p.role===1; })[0];
+      return found || {};
+    });
+    var goodsImgClass = Vue.computed(function () {
+      return (order.goodsCategory && CAT_EMOJI[order.goodsCategory]) ? order.goodsCategory : 'default';
+    });
+    var goodsImgEmoji = Vue.computed(function () {
+      return CAT_EMOJI[order.goodsCategory] || '🛒';
+    });
+    var showPriceSave = Vue.computed(function () {
+      return isSpot.value && order.originalPrice && parseFloat(order.originalPrice) > parseFloat(order.pricePerPerson||0);
+    });
+    var priceSaved = Vue.computed(function () {
+      if (!showPriceSave.value) return '0';
+      return (parseFloat(order.originalPrice) - parseFloat(order.pricePerPerson)).toFixed(2);
+    });
+
+    /* ── 头像颜色 ── */
+    function avatarColor(uid) {
+      var hue = ((uid||0) * 137 + 30) % 360;
+      return 'hsl(' + hue + ', 55%, 55%)';
+    }
+
+    /* ── 日期格式化 ── */
+    function formatDate(d) {
+      if (!d) return '--';
+      try { var dt = new Date(d); return ('0'+(dt.getMonth()+1)).slice(-2)+'-'+('0'+dt.getDate()).slice(-2)+' '+('0'+dt.getHours()).slice(-2)+':'+('0'+dt.getMinutes()).slice(-2); } catch(e) { return d; }
+    }
+
+    /* ── 倒计时 ── */
+    function updateCountdown() {
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+      var s = order.status;
+      if (s === 4) {
+        countdownClass.value = 'cancelled';
+        countdownText.value = '❌ 拼单已取消';
+        return;
+      }
+      if (s === 3 && order.finishedAt) {
+        countdownClass.value = 'finished';
+        countdownText.value = '✅ 交易已于 ' + formatDate(order.finishedAt) + ' 完成';
+        return;
+      }
+      if (s === 3) {
+        countdownClass.value = 'finished';
+        countdownText.value = '✅ 交易已完成';
+        return;
+      }
+      if (s === 2) {
+        countdownClass.value = 'delivering';
+        countdownText.value = '📦 商品已买到，请联系团长取货';
+        return;
+      }
+      if (s === 1) {
+        countdownClass.value = 'purchasing';
+        countdownText.value = '🏪 团长正在采购中...';
+        return;
+      }
+      if (s === 0 && order.deadline) {
+        countdownClass.value = 'gathering';
+        var tick = function () {
+          var now = Date.now();
+          var dl = new Date(order.deadline).getTime();
+          var left = Math.max(0, dl - now);
+          if (left <= 0) { countdownText.value = '⏱ 已截单'; return; }
+          var h = Math.floor(left / 3600000);
+          var m = Math.floor((left % 3600000) / 60000);
+          countdownText.value = '⏱ 还剩 ' + h + '小时' + m + '分 截单';
+        };
+        tick();
+        countdownTimer = setInterval(tick, 1000);
+        return;
+      }
+      countdownClass.value = 'finished';
+      countdownText.value = '';
+    }
+
+    /* ── API ── */
+    function fetchOrder() {
+      loading.value = true;
+      request('/api/v1/orders/' + orderId).then(function (res) {
+        if (res && res.code === 0 && res.data) {
+          var d = res.data;
+          // 订单数据
+          var ord = d.order || {};
+          Object.keys(ord).forEach(function(k) { order[k] = ord[k]; });
+          // 参与者
+          participants.value = d.participants || [];
+          // 核销码 (API返回 verify_code → convertKeys → verifyCode)
+          verifyCode.value = d.verifyCode || '';
+          // 启动倒计时
+          updateCountdown();
+        } else {
+          vant.showToast('订单数据加载失败');
+        }
+      }).catch(function () {
+        vant.showToast('网络异常，请稍后重试');
+      }).finally(function () {
+        loading.value = false;
+      });
+    }
+
+    /* ── 操作 ── */
+    function goPay() {
+      goPage('pay-confirm.html', { id: orderId });
+    }
+    function onMarkPurchased() {
+      vant.showLoadingToast({ message:'处理中...', forbidClick:true });
+      request('/api/v1/orders/' + orderId + '/mark-purchased', { method:'POST', body:{} }).then(function (res) {
+        vant.closeToast();
+        if (res && res.code === 0) { vant.showToast('已标记采购'); fetchOrder(); }
+        else vant.showToast(res.message || '操作失败');
+      }).catch(function () { vant.closeToast(); });
+    }
+    function onDisband() {
+      vant.showConfirmDialog({ title:'确认取消', message:'确定取消拼单？已支付的拼友将自动退款。' }).then(function () {
+        vant.showLoadingToast({ message:'取消中...', forbidClick:true });
+        request('/api/v1/orders/' + orderId + '/disband', { method:'POST', body:{} }).then(function (res) {
+          vant.closeToast();
+          if (res && res.code === 0) { vant.showToast('拼单已取消'); fetchOrder(); }
+          else vant.showToast(res.message || '操作失败');
+        }).catch(function () { vant.closeToast(); });
+      }).catch(function () {});
+    }
+    function onShare() {
+      var text = '【拼单】' + (order.goodsName||'好物') + ' ¥' + (order.pricePerPerson||'--') + '/人 还差' + remainingPeople.value + '人！';
+      var url = location.origin + '/order-detail.html?id=' + orderId;
+      if (navigator.share) {
+        navigator.share({ title:'半仓智拼', text:text, url:url }).catch(function(){});
+      } else {
+        var input = document.createElement('textarea');
+        input.value = text + ' ' + url;
+        document.body.appendChild(input); input.select();
+        try { document.execCommand('copy'); vant.showToast('链接已复制'); } catch(e) { vant.showToast('复制失败'); }
+        document.body.removeChild(input);
+      }
+    }
+
+    /* ── PRD 4.4/4.6: 拼友退出 / 申请退款 / 申请售后 ── */
+    function onQuit() {
+      vant.showConfirmDialog({
+        title:'退出拼单',
+        message:'确定退出拼单吗？退出后将全额退款，信用分-1。',
+        confirmButtonText:'确认退出', confirmButtonColor:'#FF4D4F',
+      }).then(function() {
+        vant.showLoadingToast({ message:'处理中...', forbidClick:true });
+        request('/api/v1/orders/' + orderId + '/quit', { method:'POST', body:{} }).then(function(res) {
+          vant.closeToast();
+          if (res && res.code === 0) { vant.showToast('已退出拼单'); fetchOrder(); }
+          else vant.showToast(res.message || '操作失败');
+        }).catch(function() { vant.closeToast(); });
+      }).catch(function() {});
+    }
+
+    function onRefund() {
+      vant.showConfirmDialog({
+        title:'申请退款',
+        message:'确定申请退款吗？采购阶段退出将扣除20%违约金（转入团长钱包），信用分-3。',
+        confirmButtonText:'确认退款', confirmButtonColor:'#FF4D4F',
+      }).then(function() {
+        vant.showLoadingToast({ message:'处理中...', forbidClick:true });
+        request('/api/v1/orders/' + orderId + '/refund', { method:'POST', body:{} }).then(function(res) {
+          vant.closeToast();
+          if (res && res.code === 0) { vant.showToast('退款成功'); fetchOrder(); }
+          else vant.showToast(res.message || '操作失败');
+        }).catch(function() { vant.closeToast(); });
+      }).catch(function() {});
+    }
+
+    function onDispute() {
+      goPage('refund-apply.html', { id: orderId });
+    }
+
+    function onVerifyCode() {
+      if (!verifyInput.value || verifyInput.value.length !== 6) {
+        vant.showToast('请输入6位核销码'); return;
+      }
+      vant.showLoadingToast({ message:'验证中...', forbidClick:true });
+      request('/api/v1/orders/' + orderId + '/verify', {
+        method:'POST', body:{ verify_code: verifyInput.value }
+      }).then(function (res) {
+        vant.closeToast();
+        if (res && res.code === 0) {
+          vant.showSuccessToast('核销成功！');
+          showVerifyInput.value = false;
+          verifyInput.value = '';
+          fetchOrder();
+        } else {
+          vant.showToast(res.message || '核销失败');
+        }
+      }).catch(function () { vant.closeToast(); });
+    }
+
+    function onBuySpot() {
+      goPage('pay-confirm.html', { id: orderId, spot: '1' });
+    }
+
+    function goBack() { history.back(); }
+
+    Vue.onMounted(function () {
+      if (!requireAuth()) return;
+      fetchOrder();
+    });
+    Vue.onUnmounted(function () {
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    });
+
+    return {
+      orderId, goPage, goBack,
+      order, participants, isCreator, isParticipant, userRole, showCode, showVerifyInput,
+      verifyCode, verifyInput, loading,
+      stepStatus, steps, isSpot, isCancelled, remainingPeople, progressPct,
+      displayParticipants, creatorInfo, goodsImgClass, goodsImgEmoji,
+      showPriceSave, priceSaved, hasBoughtSpot, countdownText, countdownClass,
+      avatarColor, formatDate,
+      goPay, onMarkPurchased, onDisband, onShare, onQuit, onRefund, onDispute,
+      onVerifyCode, onBuySpot,
+      fetchOrder,
+    };
+  }
+});
+app.use(vant); app.mount('#app');
+</script>
+</body>
+</html>

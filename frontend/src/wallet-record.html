@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 资金流水</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" />
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   HalfCart H5 全局设计规范 V1.0
+   主色:#FF7D00 | 收入:#52C41A | 支出:#FF4D4F
+   ═══════════════════════════════════════════ */
+:root {
+  --primary:#FF7D00; --primary-light:rgba(255,125,0,.10);
+  --success:#52C41A; --danger:#FF4D4F;
+  --bg:#F5F7FA; --card-bg:rgba(255,255,255,.85);
+  --title:#1D2129; --body:#4E5969; --hint:#86909C;
+  --shadow:0 2px 12px rgba(0,0,0,.06);
+  --radius:12px;
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--body);-webkit-font-smoothing:antialiased;
+  display:flex;justify-content:center;min-height:100vh
+}
+#app{
+  width:100%;max-width:480px;min-height:100vh;background:var(--bg);
+  position:relative;overflow-x:hidden;padding-top:152px;padding-bottom:24px
+}
+
+/* ── 顶部导航 ── */
+.nav-bar{
+  position:fixed;top:0;z-index:100;width:100%;max-width:480px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;height:56px;padding:0 16px;gap:12px;
+  background:rgba(255,255,255,.88);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,0,0,.04)
+}
+.nav-back{font-size:22px;color:var(--title);flex-shrink:0;cursor:pointer}
+.nav-title{flex:1;text-align:center;font-size:17px;font-weight:600;color:var(--title)}
+.nav-filter{font-size:20px;color:var(--title);flex-shrink:0;cursor:pointer}
+
+/* ── 统计摘要 ── */
+.summary-bar{
+  position:fixed;top:56px;z-index:99;width:100%;max-width:480px;left:50%;transform:translateX(-50%);
+  display:flex;padding:8px 16px;gap:0;
+  background:rgba(255,255,255,.88);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,0,0,.04)
+}
+.summary-item{flex:1;text-align:center}
+.summary-label{font-size:11px;color:var(--hint)}
+.summary-value{font-size:16px;font-weight:700;margin-top:2px}
+.summary-value.income{color:var(--success)}
+.summary-value.outcome{color:var(--danger)}
+
+/* ── 筛选标签栏 ── */
+.filter-bar{
+  position:fixed;top:106px;z-index:98;width:100%;max-width:480px;left:50%;transform:translateX(-50%);
+  display:flex;gap:0;padding:6px 16px;overflow-x:auto;scrollbar-width:none;
+  background:rgba(255,255,255,.88);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+}
+.filter-bar::-webkit-scrollbar{display:none}
+.filter-tag{
+  flex-shrink:0;padding:5px 12px;font-size:12px;font-weight:500;white-space:nowrap;
+  cursor:pointer;color:var(--hint);border-radius:14px;margin-right:6px;
+  background:#F7F8FA;transition:all .2s
+}
+.filter-tag.active{background:var(--primary-light);color:var(--primary);font-weight:600}
+
+/* ── 月份分组卡片 ── */
+.month-card{
+  margin:12px 16px 0;padding:0;background:var(--card-bg);backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);border-radius:var(--radius);
+  box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.6);overflow:hidden
+}
+.month-header{
+  padding:10px 16px;font-size:13px;font-weight:600;color:var(--title);
+  background:rgba(0,0,0,.01);display:flex;align-items:center;justify-content:space-between
+}
+.month-total{font-size:12px;font-weight:500}
+.month-total.plus{color:var(--success)}
+.month-total.minus{color:var(--danger)}
+
+/* ── 单条流水 ── */
+.flow-item{cursor:pointer;transition:all .25s ease}
+.flow-item:active{background:rgba(0,0,0,.015)}
+.flow-item+.flow-item .flow-row{border-top:1px solid rgba(0,0,0,.04)}
+.flow-row{display:flex;align-items:center;padding:12px 16px;gap:10px}
+.flow-icon{
+  width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0
+}
+.flow-icon.income{background:rgba(82,196,26,.10)}
+.flow-icon.outcome{background:rgba(255,77,79,.08)}
+.flow-icon.refund{background:rgba(22,93,255,.08)}
+.flow-icon.freeze{background:rgba(255,125,0,.08)}
+.flow-info{flex:1;min-width:0}
+.flow-name{font-size:14px;font-weight:500;color:var(--title);margin-bottom:2px}
+.flow-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--hint)}
+.flow-status{font-size:10px;padding:1px 6px;border-radius:4px;font-weight:500}
+.flow-status.done{background:rgba(82,196,26,.10);color:var(--success)}
+.flow-status.pending{background:rgba(255,125,0,.08);color:var(--primary)}
+.flow-amount{font-size:16px;font-weight:600;flex-shrink:0;text-align:right}
+.flow-amount.plus{color:var(--success)}
+.flow-amount.minus{color:var(--danger)}
+
+/* ── 展开详情 ── */
+.flow-detail{
+  overflow:hidden;max-height:0;transition:max-height .3s ease;background:rgba(0,0,0,.012)
+}
+.flow-detail.open{max-height:140px}
+.flow-detail-inner{padding:0 16px 12px}
+.detail-row{display:flex;padding:3px 0;font-size:12px}
+.detail-label{color:var(--hint);width:60px;flex-shrink:0}
+.detail-value{color:var(--body);flex:1;word-break:break-all}
+
+/* ── 骨架屏 ── */
+@keyframes sk-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skeleton-flow{display:flex;align-items:center;padding:12px 16px;gap:10px}
+.skeleton-flow+.skeleton-flow{border-top:1px solid rgba(0,0,0,.04)}
+.sk-circle{width:38px;height:38px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(90deg,#F0F1F3 30%,#E5E6EB 50%,#F0F1F3 70%);background-size:200% 100%;animation:sk-shimmer 1.5s infinite}
+.sk-line{height:13px;border-radius:6px;background:linear-gradient(90deg,#F0F1F3 30%,#E5E6EB 50%,#F0F1F3 70%);background-size:200% 100%;animation:sk-shimmer 1.5s infinite}
+.sk-line.wide{width:110px;margin-bottom:6px}
+.sk-line.narrow{width:60px}
+.sk-amount{width:60px;height:16px;border-radius:8px;flex-shrink:0;
+  background:linear-gradient(90deg,#F0F1F3 30%,#E5E6EB 50%,#F0F1F3 70%);background-size:200% 100%;animation:sk-shimmer 1.5s infinite}
+
+/* ── 空状态 ── */
+.empty-state{text-align:center;padding:48px 20px;color:var(--hint)}
+.empty-icon{font-size:48px;margin-bottom:12px;display:block}
+
+/* ── 底部加载 ── */
+.load-more{text-align:center;padding:16px;font-size:12px;color:var(--hint)}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ═══ 顶部导航 ═══ -->
+  <div class="nav-bar">
+    <span class="nav-back" @click="goBack">←</span>
+    <span class="nav-title">资金流水</span>
+    <span class="nav-filter" @click="onFilter">📅</span>
+  </div>
+
+  <!-- ═══ 统计摘要 ═══ -->
+  <div class="summary-bar" v-if="!loading">
+    <div class="summary-item">
+      <div class="summary-label">本月收入</div>
+      <div class="summary-value income">¥{{ monthIncome }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">本月支出</div>
+      <div class="summary-value outcome">¥{{ monthOutcome }}</div>
+    </div>
+  </div>
+
+  <!-- ═══ 类型筛选 ═══ -->
+  <div class="filter-bar" :style="{top: (!loading?'112px':'56px')}">
+    <span class="filter-tag" v-for="t in filterTypes" :key="t.key"
+      :class="{active:activeFilter===t.key}" @click="switchFilter(t.key)">{{ t.label }}</span>
+  </div>
+
+  <!-- ═══ 流水列表 ═══ -->
+  <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
+    <!-- 骨架屏 -->
+    <template v-if="loading">
+      <div class="month-card">
+        <div class="skeleton-flow"><div class="sk-circle"></div><div class="flow-info"><div class="sk-line wide"></div><div class="sk-line narrow"></div></div><div class="sk-amount"></div></div>
+        <div class="skeleton-flow"><div class="sk-circle"></div><div class="flow-info"><div class="sk-line wide"></div><div class="sk-line narrow"></div></div><div class="sk-amount"></div></div>
+        <div class="skeleton-flow"><div class="sk-circle"></div><div class="flow-info"><div class="sk-line wide"></div><div class="sk-line narrow"></div></div><div class="sk-amount"></div></div>
+        <div class="skeleton-flow"><div class="sk-circle"></div><div class="flow-info"><div class="sk-line wide"></div><div class="sk-line narrow"></div></div><div class="sk-amount"></div></div>
+      </div>
+    </template>
+
+    <!-- 空状态 -->
+    <div class="empty-state" v-if="!loading && filteredFlows.length===0">
+      <span class="empty-icon">{{ emptyIcon }}</span>
+      <div>{{ emptyText }}</div>
+    </div>
+
+    <!-- 流水列表 -->
+    <template v-if="!loading">
+      <div class="month-card" v-for="month in filteredFlows" :key="month.label">
+        <div class="month-header">
+          <span>{{ month.label }}</span>
+          <span class="month-total" :class="month.netAmount>=0?'plus':'minus'">
+            {{ month.netAmount>=0?'+':''}}¥{{ Math.abs(month.netAmount).toFixed(2) }}
+          </span>
+        </div>
+        <div class="flow-item" v-for="f in month.items" :key="f.id" @click="toggleDetail(f)">
+          <div class="flow-row">
+            <div class="flow-icon" :class="f.iconClass">{{ f.icon }}</div>
+            <div class="flow-info">
+              <div class="flow-name">{{ f.name }}</div>
+              <div class="flow-meta">
+                <span>{{ f.time }}</span>
+                <span class="flow-status" :class="f.statusClass">{{ f.statusLabel }}</span>
+              </div>
+            </div>
+            <div class="flow-amount" :class="f.amount>0?'plus':'minus'">{{ f.amount>0?'+':''}}¥{{ Math.abs(f.amount).toFixed(2) }}</div>
+          </div>
+          <div class="flow-detail" :class="{open:f.expanded}">
+            <div class="flow-detail-inner">
+              <div class="detail-row"><span class="detail-label">订单编号</span><span class="detail-value">{{ f.orderNo||'—' }}</span></div>
+              <div class="detail-row"><span class="detail-label">到账时间</span><span class="detail-value">{{ f.arriveTime||f.time }}</span></div>
+              <div class="detail-row"><span class="detail-label">备注</span><span class="detail-value">{{ f.remark||'—' }}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- 加载更多 -->
+    <div class="load-more" v-if="!loading && hasMore">
+      <van-loading v-if="loadingMore" size="18px" text-color="#86909C">加载中...</van-loading>
+      <span v-else-if="filteredFlows.length>0" style="color:var(--hint);font-size:12px">— 已加载全部 —</span>
+    </div>
+  </van-pull-refresh>
+</div>
+
+<script>
+var app = Vue.createApp({
+  setup: function() {
+    requireAuth();
+    var goPage = window.goPage;
+
+    /* ── 筛选 ── */
+    var activeFilter = Vue.ref('all');
+    var filterTypes = [
+      {key:'all',label:'全部'},{key:'income',label:'订单收入'},{key:'withdraw',label:'提现支出'},
+      {key:'refund',label:'退款到账'},{key:'freeze',label:'冻结解冻'},
+    ];
+
+    /* ── 分页 ── */
+    var page = 1, pageSize = 20, hasMore = Vue.ref(true);
+    var loading = Vue.ref(true);
+    var loadingMore = Vue.ref(false);
+    var refreshing = Vue.ref(false);
+
+    /* ── 流水数据 ── */
+    var allFlows = Vue.reactive([]);
+
+    var filterMap = {
+      all: function() { return true; },
+      income: function(f) { return f.amount > 0; },
+      withdraw: function(f) { return f.amount < 0 && f.iconClass === 'outcome'; },
+      refund: function(f) { return f.iconClass === 'refund'; },
+      freeze: function(f) { return f.iconClass === 'freeze'; }
+    };
+
+    var filteredFlows = Vue.computed(function() {
+      var list = allFlows.filter(filterMap[activeFilter.value] || filterMap.all);
+      var months = []; var seen = {};
+      list.forEach(function(f) {
+        if (!seen[f.month]) { seen[f.month] = []; }
+        seen[f.month].push(f);
+      });
+      // 按月份排序
+      var keys = Object.keys(seen).sort(function(a,b) { return b.localeCompare(a); });
+      return keys.map(function(m) {
+        var items = seen[m];
+        var net = items.reduce(function(s, f) { return s + f.amount; }, 0);
+        return { label: m, items: items, netAmount: net };
+      });
+    });
+
+    /* ── 月度统计 ── */
+    var monthIncome = Vue.ref('0.00');
+    var monthOutcome = Vue.ref('0.00');
+    function updateMonthSummary() {
+      var now = new Date();
+      var thisMonth = now.getFullYear() + '年' + (now.getMonth()+1) + '月';
+      var inc = 0, out = 0;
+      allFlows.forEach(function(f) {
+        if (f.month !== thisMonth) return;
+        if (f.amount > 0) inc += f.amount;
+        else out += Math.abs(f.amount);
+      });
+      monthIncome.value = inc.toFixed(2);
+      monthOutcome.value = out.toFixed(2);
+    }
+
+    /* ── 空状态文案 ── */
+    var emptyIcon = Vue.computed(function() {
+      var map = {all:'📭',income:'💰',withdraw:'💸',refund:'↩️',freeze:'💳'};
+      return map[activeFilter.value] || '📭';
+    });
+    var emptyText = Vue.computed(function() {
+      var map = {all:'暂无流水记录',income:'暂无收入记录',withdraw:'暂无提现记录',refund:'暂无退款记录',freeze:'暂无冻结记录'};
+      return map[activeFilter.value] || '暂无相关记录';
+    });
+
+    /* ── 解析 URL 参数 ── */
+    var urlFilter = window.getQueryParam ? window.getQueryParam('filter') : null;
+    if (urlFilter && filterMap[urlFilter]) { activeFilter.value = urlFilter; }
+
+    /* ── 拉取数据 ── */
+    function fetchFlows(isLoadMore) {
+      if (!isLoadMore) { page = 1; hasMore.value = true; loading.value = true; }
+      else { loadingMore.value = true; }
+
+      request('/api/v1/user/balance-logs?page=' + page + '&page_size=' + pageSize).then(function(res) {
+        if (res && res.code === 0 && res.data && res.data.items) {
+          var items = res.data.items;
+          if (!isLoadMore) { allFlows.splice(0, allFlows.length); }
+          items.forEach(function(l) {
+            var m = window.getFlowIcon(l.type);
+            var d = l.createdAt ? new Date(l.createdAt) : new Date();
+            allFlows.push({
+              id: l.logNo || ('flow_'+Math.random().toString(36).slice(2,8)),
+              name: l.remark || l.logTypeLabel || ('流水' + l.type),
+              time: (d.getMonth()+1) + '-' + ('0'+d.getDate()).slice(-2) + ' ' + ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2),
+              amount: parseFloat(l.amount || 0),
+              statusLabel: '已完成', statusClass: 'done',
+              icon: m.icon, iconClass: m.cls,
+              orderNo: l.orderId ? 'HC' + l.orderId : '—',
+              remark: l.remark || '', arriveTime: '',
+              month: d.getFullYear() + '年' + (d.getMonth()+1) + '月',
+              expanded: false
+            });
+          });
+          hasMore.value = items.length >= pageSize;
+          if (hasMore.value) page++;
+        } else {
+          hasMore.value = false;
+        }
+      }).catch(function() {}).finally(function() {
+        loading.value = false;
+        loadingMore.value = false;
+        refreshing.value = false;
+        updateMonthSummary();
+      });
+    }
+
+    Vue.onMounted(function() { fetchFlows(); });
+
+    /* ── 事件 ── */
+    var toggleDetail = function(f) { f.expanded = !f.expanded; };
+    var switchFilter = function(k) {
+      activeFilter.value = k;
+      page = 1;
+      fetchFlows();
+    };
+
+    var onFilter = function() {
+      vant.showActionSheet({
+        title: '选择时间范围',
+        actions: [
+          { name: '本月', value: 'month' },
+          { name: '近3个月', value: '3month' },
+          { name: '近1年', value: 'year' },
+          { name: '全部', value: 'all' }
+        ],
+        cancelText: '取消'
+      }).then(function(res) {
+        if (res.value === 'all') {
+          // 重新拉取全部
+          page = 1; fetchFlows();
+        } else {
+          // 时间范围筛选（通过后端参数）
+          var now = new Date();
+          var startTime;
+          if (res.value === 'month') {
+            startTime = new Date(now.getFullYear(), now.getMonth(), 1);
+          } else if (res.value === '3month') {
+            startTime = new Date(now.getFullYear(), now.getMonth()-3, 1);
+          } else {
+            startTime = new Date(now.getFullYear()-1, now.getMonth(), 1);
+          }
+          page = 1; loading.value = true; allFlows.splice(0, allFlows.length);
+          request('/api/v1/user/balance-logs?page=1&page_size=100&start_time=' + startTime.toISOString()).then(function(res) {
+            if (res && res.code === 0 && res.data && res.data.items) {
+              res.data.items.forEach(function(l) {
+                var m = window.getFlowIcon(l.type);
+                var d = l.createdAt ? new Date(l.createdAt) : new Date();
+                allFlows.push({
+                  id: l.logNo || ('flow_'+Math.random().toString(36).slice(2,8)),
+                  name: l.remark || l.logTypeLabel || ('流水' + l.type),
+                  time: (d.getMonth()+1) + '-' + ('0'+d.getDate()).slice(-2) + ' ' + ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2),
+                  amount: parseFloat(l.amount || 0),
+                  statusLabel: '已完成', statusClass: 'done',
+                  icon: m.icon, iconClass: m.cls,
+                  orderNo: l.orderId ? 'HC' + l.orderId : '—',
+                  remark: l.remark || '', arriveTime: '',
+                  month: d.getFullYear() + '年' + (d.getMonth()+1) + '月',
+                  expanded: false
+                });
+              });
+            }
+          }).catch(function() {}).finally(function() { loading.value = false; updateMonthSummary(); });
+        }
+      }).catch(function() {});
+    };
+
+    var onRefresh = function() { refreshing.value = true; page = 1; fetchFlows(); };
+    var goBack = function() { history.back(); };
+
+    return {
+      activeFilter, filterTypes, refreshing, loading, loadingMore, hasMore,
+      filteredFlows, monthIncome, monthOutcome, emptyIcon, emptyText,
+      switchFilter, onFilter, toggleDetail, onRefresh, goBack
+    };
+  }
+});
+app.use(vant).mount('#app');
+</script>
+</body>
+</html>

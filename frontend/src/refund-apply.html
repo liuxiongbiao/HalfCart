@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 申请退款</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" /> 
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   HalfCart H5 全局设计规范 V1.0
+   主色:#FF7D00 | 成功:#52C41A | 警示:#FF4D4F
+   ═══════════════════════════════════════════ */
+:root {
+  --primary:#FF7D00; --primary-light:rgba(255,125,0,.10);
+  --success:#52C41A; --danger:#FF4D4F; --danger-light:rgba(255,77,79,.06);
+  --bg:#F5F7FA; --card-bg:rgba(255,255,255,.85);
+  --title:#1D2129; --body:#4E5969; --hint:#86909C;
+  --border:#E5E6EB;
+  --shadow:0 2px 12px rgba(0,0,0,.06);
+  --radius:12px; --radius-btn:24px;
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--body);-webkit-font-smoothing:antialiased;
+  display:flex;justify-content:center;min-height:100vh
+}
+#app{
+  width:100%;max-width:480px;min-height:100vh;background:var(--bg);
+  position:relative;overflow-x:hidden;
+  padding-top:56px;padding-bottom:calc(100px + var(--safe-bottom))
+}
+/* ── 顶部导航 ── */
+.nav-bar{
+  position:fixed;top:0;z-index:100;width:100%;max-width:480px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;height:56px;padding:0 16px;gap:12px;
+  background:rgba(255,255,255,.88);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,0,0,.04)
+}
+.nav-back{font-size:22px;color:var(--title);flex-shrink:0;cursor:pointer}
+.nav-title{flex:1;text-align:center;font-size:17px;font-weight:600;color:var(--title)}
+/* ── 通用卡片 ── */
+.card{
+  margin:12px 16px 0;padding:16px;
+  background:var(--card-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.6)
+}
+.module-title{font-size:13px;font-weight:600;color:var(--hint);margin-bottom:12px;letter-spacing:.5px}
+/* ── 商品信息 ── */
+.goods-row{display:flex;gap:12px}
+.goods-thumb{
+  width:64px;height:64px;border-radius:8px;flex-shrink:0;
+  background:linear-gradient(135deg,rgba(255,125,0,.08),rgba(255,157,48,.15));
+  display:flex;align-items:center;justify-content:center;font-size:28px
+}
+.goods-info{flex:1;min-width:0}
+.goods-name{font-size:15px;font-weight:600;color:var(--title);line-height:1.4;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px}
+.goods-meta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--hint);margin-bottom:4px}
+.goods-tag{padding:1px 6px;border-radius:4px;background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:500}
+.goods-bottom{font-size:12px;color:var(--hint)}
+/* ── 退款原因 ── */
+.reason-option{
+  display:flex;align-items:center;padding:13px 0;cursor:pointer;transition:all .25s ease
+}
+.reason-option:active{opacity:.7}
+.reason-option+.reason-option{border-top:1px solid rgba(0,0,0,.04)}
+.reason-label{flex:1;font-size:14px;color:var(--body)}
+.reason-radio{
+  width:22px;height:22px;border-radius:50%;flex-shrink:0;transition:all .25s ease;
+  display:flex;align-items:center;justify-content:center
+}
+.reason-radio.checked{background:var(--primary)}
+.reason-radio.unchecked{border:2px solid var(--border);background:#fff}
+.reason-radio.checked::after{content:'';width:8px;height:8px;border-radius:50%;background:#fff}
+/* 其他原因展开 */
+.extra-reason-wrap{
+  overflow:hidden;transition:all .3s ease;max-height:0;opacity:0
+}
+.extra-reason-wrap.open{max-height:120px;opacity:1;margin-top:8px}
+.extra-textarea{
+  width:100%;min-height:72px;border-radius:8px;border:1px solid var(--border);
+  background:#F7F8FA;padding:10px 14px;font-size:14px;color:var(--title);outline:none;
+  resize:vertical;font-family:inherit;transition:all .25s ease
+}
+.extra-textarea:focus{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-light)}
+.extra-textarea::placeholder{color:var(--hint);font-size:13px}
+/* ── 金额明细 ── */
+.amount-row{
+  display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:14px
+}
+.amount-label{color:var(--body)}
+.amount-value{font-weight:500;color:var(--body)}
+.amount-value.danger{color:var(--danger)}
+.amount-divider{height:1px;background:rgba(0,0,0,.05);margin:6px 0}
+.amount-total{display:flex;justify-content:space-between;align-items:center;padding-top:6px}
+.amount-total .label{font-size:14px;font-weight:600;color:var(--title)}
+.amount-total .value{font-size:20px;font-weight:600;color:var(--success)}
+.amount-footnote{font-size:11px;color:var(--hint);margin-top:10px;padding-top:8px;border-top:1px solid rgba(0,0,0,.04)}
+/* ── 退款说明 ── */
+.tip-title{font-size:14px;font-weight:600;color:var(--title);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.tip-item{display:flex;gap:8px;font-size:13px;color:var(--hint);line-height:1.7;padding:4px 0}
+.tip-num{flex-shrink:0;width:18px;height:18px;border-radius:50%;background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:2px}
+/* ── 底部提交栏 ── */
+.submit-bar{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:100;
+  padding:10px 16px calc(10px + var(--safe-bottom));
+  background:rgba(255,255,255,.92);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);border-top:1px solid rgba(0,0,0,.04)
+}
+.submit-hint{text-align:center;font-size:11px;color:var(--hint);margin-bottom:8px}
+.submit-btn{
+  width:100%;height:48px;border-radius:var(--radius-btn);border:none;
+  background:linear-gradient(135deg,#FF9A3C,var(--primary));color:#fff;
+  font-size:16px;font-weight:600;letter-spacing:.5px;
+  box-shadow:0 4px 16px rgba(255,125,0,.30);cursor:pointer;transition:all .25s ease
+}
+.submit-btn:active{transform:scale(.96);opacity:.9}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ═══ 顶部导航 ═══ -->
+  <div class="nav-bar">
+    <span class="nav-back" @click="goBack">←</span>
+    <span class="nav-title">申请退款</span>
+  </div>
+
+  <!-- ═══ 订单信息 ═══ -->
+  <div class="card">
+    <div class="goods-row">
+      <div class="goods-thumb">🍰</div>
+      <div class="goods-info">
+        <div class="goods-name">{{ order.goodsName }}</div>
+        <div class="goods-meta">
+          <span class="goods-tag">{{ order.statusLabel }}</span>
+          <span>实付 ¥{{ order.paidAmount }}</span>
+        </div>
+        <div class="goods-bottom">下单时间 {{ order.createdAt }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 退款原因 ═══ -->
+  <div class="card">
+    <div class="module-title">退款原因</div>
+    <div class="reason-option" v-for="r in reasons" :key="r.key" @click="selectReason(r.key)">
+      <span class="reason-label">{{ r.label }}</span>
+      <div class="reason-radio" :class="reason===r.key?'checked':'unchecked'"></div>
+    </div>
+    <div class="extra-reason-wrap" :class="{open:reason==='other'}">
+      <textarea class="extra-textarea" v-model="extraReason" placeholder="请详细描述退款原因，便于团长审核处理"></textarea>
+    </div>
+  </div>
+
+  <!-- ═══ 退款金额明细 ═══ -->
+  <div class="card">
+    <div class="module-title">退款金额明细</div>
+    <div class="amount-row">
+      <span class="amount-label">实付金额</span>
+      <span class="amount-value">¥{{ order.paidAmount }}</span>
+    </div>
+    <div class="amount-row">
+      <span class="amount-label">平台服务费</span>
+      <span class="amount-value" style="color:var(--hint);">已减免</span>
+    </div>
+    <div class="amount-row">
+      <span class="amount-label">违约金</span>
+      <span class="amount-value danger">-¥{{ penalty }}</span>
+    </div>
+    <div class="amount-divider"></div>
+    <div class="amount-total">
+      <span class="label">{{ order.statusLabel }} · 预计到账</span>
+      <span class="value">¥{{ refundAmount }}</span>
+    </div>
+    <div class="amount-footnote">
+      ⚠ {{ refundRuleText }}<br>📊 信用分影响：{{ order.status===0 ? '-1 分' : '-3 分' }}
+    </div>
+  </div>
+
+  <!-- ═══ 退款说明 ═══ -->
+  <div class="card">
+    <div class="tip-title">📋 退款说明</div>
+    <div class="tip-item"><span class="tip-num">1</span><span>退款申请提交后，团长将在 24 小时内进行审核处理</span></div>
+    <div class="tip-item"><span class="tip-num">2</span><span>审核通过后，资金将在 1-3 个工作日内原路退回您的支付账户</span></div>
+    <div class="tip-item"><span class="tip-num">3</span><span>若团长已线下完成采购，退款申请将无法通过，建议先与团长沟通</span></div>
+  </div>
+
+  <!-- ═══ 底部提交栏 ═══ -->
+  <div class="submit-bar">
+    <div class="submit-hint">📌 提交即表示您同意退款规则，请确认信息无误</div>
+    <button class="submit-btn" @click="onSubmit">提交申请</button>
+  </div>
+</div>
+
+<script>
+const { ref, reactive, computed } = Vue;
+
+Vue.createApp({
+  setup() { requireAuth();
+    var orderId = getQueryParam('id') || '1';
+    var order = reactive({ goodsName:'加载中...', statusLabel:'', paidAmount:'0.00', createdAt:'', status:0 });
+    var reasons = [{key:'no_want',label:'不想拼了'},{key:'wrong',label:'商品买错了'},{key:'no_contact',label:'联系不上团长'},{key:'quality',label:'商品有问题'},{key:'other',label:'其他原因'}];
+    var reason = ref('no_want'), extraReason = ref('');
+    var selectReason = function (key) { reason.value = key; };
+    var penalty = computed(function () { return (parseFloat(order.paidAmount) * (order.status===0?0:order.status===1?0.2:0)).toFixed(2); });
+    var refundAmount = computed(function () { return (parseFloat(order.paidAmount) - parseFloat(penalty.value)).toFixed(2); });
+    var refundRuleText = computed(function () { return order.status===0 ? '当前订单处于集资中状态，全额退款，信用分 -1；成团后退出扣除 20% 违约金，信用分 -3' : order.status===1 ? '当前订单已成团，退款扣除 20% 违约金作为团长补偿，信用分 -3' : '当前状态不可退款'; });
+
+    function fetchOrder() {
+      request('/api/v1/orders/' + orderId).then(function (res) {
+        if (res && res.code === 0 && res.data) {
+          var d = res.data; var st = parseInt(d.status)||0;
+          order.goodsName = d.goodsName || ''; order.paidAmount = d.pricePerPerson || '0';
+          order.status = st; order.statusLabel = {0:'拼单集资中',1:'成团采购中',2:'待交接',3:'已完成'}[st]||'';
+          order.createdAt = d.createdAt || '';
+        }
+      }).catch(function () {});
+    }
+    Vue.onMounted(function () { fetchOrder(); });
+
+    var onSubmit = function () {
+      var desc = reason.value==='other'?extraReason.value:(reasons.find(function(r){return r.key===reason.value})||{}).label||'';
+      vant.showConfirmDialog({ title:'确认退款', message:'退款金额 ¥'+refundAmount.value+'\n违约金 -¥'+penalty.value+'\n\n退款原因：'+desc+'\n\n确认提交退款申请？', confirmButtonText:'确认提交', confirmButtonColor:'#FF7D00' })
+        .then(function () { request('/api/v1/orders/'+orderId+'/refund',{method:'POST',body:{}}).then(function(res){if(res&&res.code===0)vant.showSuccessToast('申请已提交');}).catch(function(){}); }).catch(function () {});
+    };
+    var goBack = function () { history.back(); };
+
+    return { order, reasons, reason, extraReason, selectReason, penalty, refundAmount, refundRuleText, onSubmit, goBack };
+  }
+}).use(vant).mount('#app');
+</script>
+</body>
+</html>

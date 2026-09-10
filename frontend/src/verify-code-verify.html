@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 核销验证</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" /> 
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   HalfCart H5 全局设计规范 V1.0
+   主色:#FF7D00 | 成功:#52C41A | 错误:#FF4D4F
+   ═══════════════════════════════════════════ */
+:root {
+  --primary: #FF7D00; --primary-light: rgba(255,125,0,.10);
+  --success: #52C41A; --success-light: rgba(82,196,26,.10);
+  --danger: #FF4D4F; --danger-light: rgba(255,77,79,.08);
+  --bg: #F5F7FA; --card-bg: rgba(255,255,255,.85);
+  --title: #1D2129; --body: #4E5969; --hint: #86909C;
+  --border: #E5E6EB;
+  --shadow: 0 2px 12px rgba(0,0,0,.06);
+  --radius: 12px; --radius-btn: 24px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background: var(--bg); color: var(--body); -webkit-font-smoothing:antialiased;
+  display:flex; justify-content:center; min-height:100vh;
+}
+#app {
+  width:100%; max-width:480px; min-height:100vh; background:var(--bg);
+  position:relative; overflow-x:hidden;
+  padding-top:56px; padding-bottom:calc(98px + var(--safe-bottom));
+}
+
+/* ── 顶部导航 ── */
+.nav-bar {
+  position:fixed; top:0; z-index:100; width:100%; max-width:480px; left:50%; transform:translateX(-50%);
+  display:flex; align-items:center; height:56px; padding:0 16px; gap:12px;
+  background:rgba(255,255,255,.88); backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px); border-bottom:1px solid rgba(0,0,0,.04);
+}
+.nav-back { font-size:22px; color:var(--title); flex-shrink:0; cursor:pointer; }
+.nav-title { flex:1; text-align:center; font-size:17px; font-weight:600; color:var(--title); }
+
+/* ── 状态切换(开发调试) ── */
+.demo-bar {
+  margin:12px 16px 0; padding:10px 16px; border-radius:var(--radius);
+  background:rgba(255,125,0,.06); display:flex; align-items:center; gap:12px; font-size:12px; color:var(--hint);
+  flex-wrap:wrap;
+}
+.demo-bar span { font-weight:500; color:var(--primary); }
+.demo-bar button {
+  padding:4px 10px; border-radius:6px; border:1px solid var(--border); background:#fff;
+  font-size:11px; color:var(--body); cursor:pointer;
+}
+
+/* ── 通用卡片 ── */
+.card {
+  margin:12px 16px 0; padding:16px;
+  background:var(--card-bg); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius); box-shadow:var(--shadow); border:1px solid rgba(255,255,255,.6);
+}
+
+/* ── 输入区 ── */
+.input-area { text-align:center; padding:28px 0 8px; }
+.input-hint { font-size:14px; color:var(--hint); margin-bottom:24px; }
+.digit-row { display:flex; justify-content:center; gap:8px; margin-bottom:8px; }
+.digit-input {
+  width:46px; height:56px; border-radius:8px; border:2px solid var(--border); background:#F7F8FA;
+  text-align:center; font-size:24px; font-weight:600; color:var(--title); outline:none;
+  font-family:"SF Mono","Menlo","Consolas",monospace; caret-color:var(--primary);
+  transition:all .25s ease;
+}
+.digit-input:focus { border-color:var(--primary); background:#fff; box-shadow:0 0 0 3px var(--primary-light); }
+.digit-input.filled { border-color:var(--primary); background:#fff; }
+.digit-input.error { border-color:var(--danger); background:var(--danger-light); animation:shake .4s ease; }
+@keyframes shake {
+  0%,100% { transform:translateX(0); }
+  20% { transform:translateX(-6px); }
+  40% { transform:translateX(6px); }
+  60% { transform:translateX(-4px); }
+  80% { transform:translateX(4px); }
+}
+/* 隐藏原生输入框 */
+.hidden-input {
+  position:absolute; opacity:0; width:0; height:0; pointer-events:none;
+}
+
+/* ── 错误提示 ── */
+.error-msg { text-align:center; font-size:13px; color:var(--danger); margin-top:8px; min-height:20px; }
+
+/* ── 成功结果卡片 ── */
+.success-badge {
+  display:inline-flex; align-items:center; gap:4px; padding:4px 12px; border-radius:20px;
+  background:var(--success-light); color:var(--success); font-size:12px; font-weight:600; margin-bottom:12px;
+}
+.result-row { display:flex; padding:6px 0; font-size:14px; }
+.result-label { color:var(--hint); width:72px; flex-shrink:0; }
+.result-value { color:var(--title); flex:1; }
+.result-value.highlight { color:var(--primary); font-weight:600; }
+
+/* ── 核销说明 ── */
+.tip-title { font-size:14px; font-weight:600; color:var(--title); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+.tip-item { display:flex; gap:8px; font-size:13px; color:var(--hint); line-height:1.7; padding:4px 0; }
+.tip-num { flex-shrink:0; width:18px; height:18px; border-radius:50%; background:var(--primary-light); color:var(--primary); font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center; margin-top:2px; }
+
+/* ── 底部操作栏 ── */
+.action-bar {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; z-index:100;
+  padding:10px 16px calc(10px + var(--safe-bottom));
+  background:rgba(255,255,255,.92); backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px); border-top:1px solid rgba(0,0,0,.04);
+  display:flex; gap:10px;
+}
+.btn {
+  flex:1; height:48px; border-radius:var(--radius-btn); font-size:15px; font-weight:600;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  transition:all .25s ease; border:none;
+}
+.btn:active { transform:scale(.96); }
+.btn-primary { background:linear-gradient(135deg,#FF9A3C,var(--primary)); color:#fff; box-shadow:0 4px 16px rgba(255,125,0,.28); }
+.btn-primary.disabled { background:#C9CDD4; color:#fff; box-shadow:none; cursor:not-allowed; pointer-events:none; }
+.btn-ghost { background:#F7F8FA; color:var(--body); }
+.btn-outline { background:#fff; color:var(--primary); border:1.5px solid var(--primary); }
+
+/* 锁定倒计时 */
+.lock-timer { text-align:center; font-size:13px; color:var(--danger); margin-top:8px; }
+</style>
+</head>
+<body>
+<div id="app" @click="focusHidden">
+  <!-- ═══ 顶部导航 ═══ -->
+  <div class="nav-bar">
+    <span class="nav-back" @click="goBack">←</span>
+    <span class="nav-title">核销验证</span>
+  </div>
+
+  <!-- ═══ 输入区 ═══ -->
+  <div class="input-area" v-if="previewState==='input'||previewState==='error'||previewState==='locked'">
+    <div class="input-hint">🔑 请输入拼友出示的 6 位核销码</div>
+    <div class="digit-row" @click.stop>
+      <input v-for="(d,i) in digits" :key="i" :ref="el=>{if(el) inputs[i]=el}"
+        class="digit-input" :class="{filled:d!=='',error:previewState==='error'}"
+        :value="d" maxlength="1" inputmode="numeric" pattern="[0-9]"
+        @input="onDigitInput(i,$event)" @keydown="onKeyDown(i,$event)" @focus="onFocus(i)" @paste="onPaste" />
+    </div>
+    <input class="hidden-input" ref="hiddenRef" @input="onHiddenInput" @keydown="onHiddenKeydown" />
+    <div class="error-msg" v-if="previewState==='error'">{{ errorMsg }}</div>
+    <div class="lock-timer" v-if="previewState==='locked'">⏱ 核销码已锁定 {{ lockMinutes }} 分钟（连续错误{{ maxErrors }}次）</div>
+  </div>
+
+  <!-- ═══ 验证成功结果 ═══ -->
+  <div class="card" v-if="previewState==='success'">
+    <div class="success-badge">✅ 核销成功</div>
+    <div class="result-row"><span class="result-label">商品名称</span><span class="result-value">{{ order.goodsName }}</span></div>
+    <div class="result-row"><span class="result-label">拼友</span><span class="result-value">{{ order.participantName }}</span></div>
+    <div class="result-row"><span class="result-label">结算金额</span><span class="result-value highlight">¥{{ order.settleAmount }}</span></div>
+    <div class="result-row"><span class="result-label">服务费</span><span class="result-value" style="color:var(--hint);">-¥{{ order.serviceFee }} (3%)</span></div>
+    <div class="result-row"><span class="result-label">到账金额</span><span class="result-value highlight">¥{{ order.income }}</span></div>
+    <div class="result-row"><span class="result-label">交接地点</span><span class="result-value">{{ order.location }}</span></div>
+  </div>
+
+  <!-- ═══ 核销说明 ═══ -->
+  <div class="card" v-if="previewState!=='success'">
+    <div class="tip-title">📋 核销说明</div>
+    <div class="tip-item"><span class="tip-num">1</span><span>请确认商品已完整交付给拼友后再进行核销验证</span></div>
+    <div class="tip-item"><span class="tip-num">2</span><span>核销成功后，订单资金扣除 3% 服务费后将自动转入可提现余额</span></div>
+    <div class="tip-item"><span class="tip-num">3</span><span>如核销码无效或已过期，请先与拼友核对信息后重试</span></div>
+  </div>
+
+  <!-- ═══ 底部操作栏 ═══ -->
+  <div class="action-bar">
+    <template v-if="previewState==='success'">
+      <button class="btn btn-ghost" @click="goHome">返回首页</button>
+      <button class="btn btn-outline" @click="goWallet">查看钱包</button>
+    </template>
+    <template v-else-if="previewState==='locked'">
+      <button class="btn btn-ghost" @click="goBack" style="flex:1;">返回</button>
+    </template>
+    <template v-else>
+      <button class="btn btn-primary" :class="{disabled:!isComplete}" @click="onVerify">
+        {{ isComplete ? '确认核销' : '请输入完整核销码' }}
+      </button>
+    </template>
+  </div>
+</div>
+
+<script>
+const { ref, reactive, computed, nextTick, watch } = Vue;
+
+Vue.createApp({
+  setup() { requireAuth();
+    /* ── 状态 ── */
+    const digits = ref(['','','','','','']);
+    const inputs = ref([]);
+    const hiddenRef = ref(null);
+    const activeIndex = ref(0);
+    const previewState = ref('input'); // input | success | error | locked
+    const errorMsg = ref('核销码错误，请核对后重新输入（还剩 4 次机会）');
+    const lockMinutes = ref('10');
+    const maxErrors = ref('5');
+
+    const isComplete = computed(() => digits.value.every(d => d !== ''));
+    /* ── 输入处理 ── */
+    const focusDigit = (idx) => {
+      const i = Math.max(0, Math.min(5, idx));
+      activeIndex.value = i;
+      nextTick(() => {
+        const el = inputs.value[i];
+        if (el && typeof el.focus === 'function') el.focus();
+      });
+    };
+
+    const onDigitInput = (i, e) => {
+      const raw = e.target.value.replace(/\D/g, '');
+      if (raw.length > 0) {
+        digits.value[i] = raw.slice(-1);
+        if (i < 5) {
+          activeIndex.value = i + 1;
+          nextTick(() => { const n = inputs.value[i+1]; if(n)n.focus(); });
+        }
+      } else {
+        digits.value[i] = '';
+      }
+      if (previewState.value !== 'input') previewState.value = 'input';
+    };
+
+    const onKeyDown = (i, e) => {
+      if (e.key === 'Backspace' && !digits.value[i]) {
+        if (i > 0) {
+          digits.value[i-1] = '';
+          activeIndex.value = i-1;
+          nextTick(() => { const n = inputs.value[i-1]; if(n){n.focus();n.select();} });
+        }
+      } else if (e.key === 'ArrowLeft' && i > 0) {
+        activeIndex.value = i-1;
+        nextTick(() => { const n = inputs.value[i-1]; if(n)n.focus(); });
+      } else if (e.key === 'ArrowRight' && i < 5) {
+        activeIndex.value = i+1;
+        nextTick(() => { const n = inputs.value[i+1]; if(n)n.focus(); });
+      }
+    };
+
+    const onFocus = (i) => { activeIndex.value = i; };
+
+    const onPaste = (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      const nums = text.replace(/\D/g, '').slice(0, 6).split('');
+      nums.forEach((n, idx) => { digits.value[idx] = n; });
+      if (nums.length < 6) focusDigit(nums.length);
+      if (previewState.value !== 'input') previewState.value = 'input';
+    };
+
+    var orderId = getQueryParam('id') || '1';
+
+    /* ── 订单数据 ── */
+    var order = reactive({ goodsName:'加载中...', settleAmount:'0.00', serviceFee:'0.00', income:'0.00', location:'', participantName:'' });
+    function fetchOrder() {
+      request('/api/v1/orders/' + orderId).then(function (res) {
+        if (res && res.code === 0 && res.data) {
+          var d = res.data;
+          order.goodsName = d.goodsName || ''; order.settleAmount = d.pricePerPerson || '0';
+          order.serviceFee = ((parseFloat(d.pricePerPerson)||0)*0.03).toFixed(2);
+          order.income = ((parseFloat(d.pricePerPerson)||0)*0.97).toFixed(2);
+          order.location = d.meetLocation || '';
+        }
+      }).catch(function () {});
+    }
+    Vue.onMounted(function () { fetchOrder(); });
+
+    /* ── 操作 ── */
+    var onVerify = function () {
+      if (!isComplete.value) return;
+      var code = digits.value.join('');
+      request('/api/v1/orders/' + orderId + '/verify', { method:'POST', body:{ code: code } }).then(function (res) {
+        if (res && res.code === 0) { previewState.value = 'success'; }
+        else { previewState.value = 'error'; errorMsg.value = (res&&res.message)||'核销码错误，请核对后重新输入'; digits.value = ['','','','','','']; focusDigit(0); }
+      }).catch(function () { previewState.value = 'error'; errorMsg.value = '核销码错误'; digits.value = ['','','','','','']; focusDigit(0); });
+    };
+
+    var simulateSuccess = function () { digits.value = ['3','8','4','7','1','6']; previewState.value = 'success'; };
+    var simulateError = function () { digits.value = ['0','0','0','0','0','0']; previewState.value = 'error'; errorMsg.value = '核销码错误'; };
+    var simulateLocked = function () { previewState.value = 'locked'; };
+    var resetAll = function () { digits.value = ['','','','','','']; previewState.value = 'input'; focusDigit(0); };
+    var goBack = function () { history.back(); };
+    var goHome = function () { goPage('index.html'); };
+    var goWallet = function () { goPage('wallet-board.html'); };
+
+    return {
+      digits, inputs, hiddenRef, activeIndex, previewState, errorMsg, lockMinutes, maxErrors,
+      isComplete, order,
+      onDigitInput, onKeyDown, onFocus, onPaste, onVerify,
+      simulateSuccess, simulateError, simulateLocked, resetAll, goBack, goHome, goWallet,
+    };
+  }
+}).use(vant).mount('#app');
+</script>
+</body>
+</html>

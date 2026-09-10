@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 收货地址</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" />
+<link rel="stylesheet" href="css/design-system.css" />
+<link rel="dns-prefetch" href="https://webapi.amap.com" />
+<link rel="preconnect" href="https://webapi.amap.com" crossorigin />
+<script src="https://webapi.amap.com/loader.js"></script>
+<script>
+// [安全] 必须在 AMapLoader.load() 之前配置
+window._AMapSecurityConfig = {
+  securityJsCode: window.AMAP_CONFIG.jsCode,
+};
+</script>
+<script src="js/common.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   HalfCart H5 全局设计规范 V1.0
+   主色:#FF7D00 | 警示:#FF4D4F | 背景:#F5F7FA
+   ══════════════════════════════════════════════ */
+:root {
+  --primary:#FF7D00; --primary-light:rgba(255,125,0,.10);
+  --danger:#FF4D4F;
+  --bg:#F5F7FA; --card-bg:rgba(255,255,255,.85);
+  --title:#1D2129; --body:#4E5969; --hint:#86909C;
+  --border:#E5E6EB;
+  --shadow:0 2px 12px rgba(0,0,0,.06);
+  --radius:12px; --radius-btn:24px;
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--body);-webkit-font-smoothing:antialiased;
+  display:flex;justify-content:center;min-height:100vh
+}
+#app{
+  width:100%;max-width:480px;min-height:100vh;background:var(--bg);
+  position:relative;overflow-x:hidden;
+  padding-top:56px;padding-bottom:calc(76px + var(--safe-bottom))
+}
+
+/* ── 顶部导航 ── */
+.nav-bar{
+  position:fixed;top:0;z-index:100;width:100%;max-width:480px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;height:56px;padding:0 16px;gap:12px;
+  background:rgba(255,255,255,.88);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,0,0,.04)
+}
+.nav-back{font-size:22px;color:var(--title);flex-shrink:0;cursor:pointer}
+.nav-title{flex:1;text-align:center;font-size:17px;font-weight:600;color:var(--title)}
+.nav-right{font-size:14px;color:var(--primary);font-weight:500;flex-shrink:0;cursor:pointer}
+
+/* ── 地址卡片 ── */
+.addr-card{
+  margin:12px 16px 0;padding:14px 16px;
+  background:var(--card-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.6);
+  transition:all .25s ease;cursor:pointer
+}
+.addr-card:active{transform:scale(.98)}
+.addr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.addr-contact{display:flex;align-items:center;gap:10px}
+.addr-name{font-size:15px;font-weight:600;color:var(--title)}
+.addr-phone{font-size:14px;color:var(--body)}
+.addr-default-tag{
+  padding:2px 8px;border-radius:4px;background:var(--primary-light);color:var(--primary);
+  font-size:10px;font-weight:600;flex-shrink:0
+}
+.addr-detail{font-size:14px;color:var(--hint);line-height:1.5;margin-bottom:10px}
+.addr-map-tag{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--primary);margin-left:4px}
+.addr-bottom{display:flex;align-items:center;justify-content:space-between}
+.addr-default-btn{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--hint);cursor:pointer}
+.addr-default-btn .radio{
+  width:18px;height:18px;border-radius:50%;border:2px solid var(--hint);display:flex;
+  align-items:center;justify-content:center;transition:all .25s ease;flex-shrink:0
+}
+.addr-default-btn .radio.checked{background:var(--primary);border-color:var(--primary)}
+.addr-default-btn .radio.checked::after{content:'';width:6px;height:6px;border-radius:50%;background:#fff}
+.addr-actions{display:flex;gap:12px}
+.addr-action{font-size:13px;cursor:pointer;padding:2px 0;transition:all .25s ease}
+.addr-action:active{opacity:.7}
+.addr-action.edit{color:var(--primary)}
+.addr-action.del{color:var(--danger)}
+
+/* ── 底部新增栏 ── */
+.bottom-bar{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:100;
+  padding:10px 16px calc(10px + var(--safe-bottom));
+  background:rgba(255,255,255,.92);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);border-top:1px solid rgba(0,0,0,.04)
+}
+.add-btn{
+  width:100%;height:48px;border-radius:var(--radius-btn);border:none;
+  background:linear-gradient(135deg,#FF9A3C,var(--primary));color:#fff;
+  font-size:16px;font-weight:600;box-shadow:0 4px 16px rgba(255,125,0,.30);
+  cursor:pointer;transition:all .25s ease
+}
+.add-btn:active{transform:scale(.96)}
+
+/* ── 空状态 ── */
+.empty-state{text-align:center;padding:64px 20px;color:var(--hint)}
+.empty-icon{font-size:48px;margin-bottom:12px;display:block}
+.empty-btn{display:inline-block;margin-top:16px;padding:10px 32px;border-radius:20px;
+  background:var(--primary);color:#fff;font-size:14px;font-weight:500;cursor:pointer}
+
+/* ── 表单弹窗 (居中卡片) ── */
+.form-overlay-card{
+  display:flex;flex-direction:column;width:100%;max-width:440px;max-height:85vh;
+  background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.15);
+  margin:0 16px
+}
+.form-header{
+  display:flex;align-items:center;padding:14px 16px;gap:12px;
+  border-bottom:1px solid #F0F1F3;flex-shrink:0
+}
+.form-header-close{font-size:20px;cursor:pointer;color:var(--hint);flex-shrink:0}
+.form-header-title{font-size:16px;font-weight:600;color:var(--title);flex:1}
+.form-body{padding:16px;overflow-y:auto;flex:1}
+.form-field{margin-bottom:16px}
+.form-field-label{font-size:13px;color:var(--hint);margin-bottom:6px;font-weight:500}
+.form-field-input{
+  width:100%;height:44px;border:1px solid var(--border);border-radius:10px;
+  padding:0 14px;font-size:14px;color:var(--title);outline:none;background:#F7F8FA;
+  transition:border-color .2s;caret-color:var(--primary)
+}
+.form-field-input:focus{border-color:var(--primary);background:#fff}
+.form-field-row{display:flex;gap:10px}
+.form-field-row .form-field{flex:1}
+.addr-pick-btn{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  width:100%;height:44px;border:1px dashed var(--primary);border-radius:10px;
+  background:var(--primary-light);color:var(--primary);font-size:14px;font-weight:500;
+  cursor:pointer;transition:all .2s;margin-bottom:16px
+}
+.addr-pick-btn:active{background:rgba(255,125,0,.18)}
+.addr-picked-text{
+  width:100%;padding:10px 14px;border-radius:10px;background:#F0FAF0;
+  font-size:13px;color:#2D8C4A;line-height:1.5;margin-bottom:16px;
+  display:flex;align-items:flex-start;gap:6px
+}
+.form-switch-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 0;border-top:1px solid #F0F1F3
+}
+.form-switch-label{font-size:14px;color:var(--body)}
+.form-submit-btn{
+  width:100%;height:46px;border-radius:23px;border:none;
+  background:linear-gradient(135deg,#FF9A3C,var(--primary));color:#fff;
+  font-size:16px;font-weight:600;box-shadow:0 4px 16px rgba(255,125,0,.30);
+  cursor:pointer;transition:all .25s ease;margin-top:4px
+}
+.form-submit-btn:active{transform:scale(.96)}
+.form-submit-btn.disabled{background:#C9CDD4;box-shadow:none;pointer-events:none}
+
+/* ── 地图选点弹窗 (居中卡片) ── */
+.map-card{
+  display:flex;flex-direction:column;width:100%;max-width:480px;height:85vh;
+  background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.15);
+  margin:0 8px
+}
+.map-header{
+  display:flex;align-items:center;padding:10px 14px;gap:8px;
+  border-bottom:1px solid #F0F1F3;flex-shrink:0
+}
+.map-close{font-size:20px;cursor:pointer;color:var(--hint);flex-shrink:0}
+.map-title{font-size:15px;font-weight:600;color:var(--title);flex:1}
+.map-search-bar{display:flex;padding:8px 14px;gap:8px;flex-shrink:0}
+.map-search-input{
+  flex:1;height:34px;border:1px solid #E5E6EB;border-radius:17px;
+  padding:0 14px;font-size:13px;outline:none;background:#F7F8FA
+}
+.map-search-btn{
+  height:34px;padding:0 14px;border:none;border-radius:17px;
+  background:var(--primary);color:#fff;font-size:12px;font-weight:500;cursor:pointer;flex-shrink:0
+}
+.map-container{flex:1;position:relative;overflow:hidden;background:#F5F7FA}
+.map-pin{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-100%);z-index:10;
+  font-size:28px;pointer-events:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))
+}
+.map-locating{
+  position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:10;
+  background:rgba(0,0,0,.7);color:#fff;padding:6px 14px;border-radius:14px;
+  font-size:12px;display:flex;align-items:center;gap:6px
+}
+.map-footer{
+  flex-shrink:0;background:#fff;border-top:1px solid #F0F1F3;
+  padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px
+}
+.map-footer-addr{
+  flex:1;font-size:13px;color:var(--body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0
+}
+.map-footer-confirm{
+  height:34px;padding:0 18px;border:none;border-radius:17px;
+  background:var(--primary);color:#fff;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0
+}
+
+/* 加载旋转 */
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ═══ 顶部导航 ═══ -->
+  <div class="nav-bar">
+    <span class="nav-back" @click="goBack">←</span>
+    <span class="nav-title">收货地址</span>
+    <span class="nav-right" @click="openAdd">新增 ›</span>
+  </div>
+
+  <!-- ═══ 地址列表 ═══ -->
+  <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
+  <div class="addr-card" v-for="addr in addresses" :key="addr.id" @click.self="selectAddr(addr)">
+    <div class="addr-top">
+      <div class="addr-contact">
+        <span class="addr-name">{{ addr.name }}</span>
+        <span class="addr-phone">{{ addr.phone }}</span>
+      </div>
+      <span class="addr-default-tag" v-if="addr.isDefault">默认</span>
+    </div>
+    <div class="addr-detail">
+      {{ addr.province }}{{ addr.city }}{{ addr.district }} {{ addr.detail }}
+      <span class="addr-map-tag" v-if="addr.lat && addr.lng">📍 地图定位</span>
+    </div>
+    <div class="addr-bottom">
+      <div class="addr-default-btn" @click.stop="setDefault(addr)">
+        <div class="radio" :class="{checked:addr.isDefault}"></div>
+        <span>设为默认</span>
+      </div>
+      <div class="addr-actions">
+        <span class="addr-action edit" @click.stop="openEdit(addr)">编辑</span>
+        <span class="addr-action del" @click.stop="confirmDel(addr)">删除</span>
+      </div>
+    </div>
+  </div>
+  </van-pull-refresh>
+
+  <!-- ═══ 空状态 ═══ -->
+  <div class="empty-state" v-if="!loading && addresses.length===0">
+    <span class="empty-icon">📍</span><div>暂无收货地址</div>
+    <div class="empty-btn" @click="openAdd">去添加</div>
+  </div>
+
+  <!-- ═══ 底部新增栏 ═══ -->
+  <div class="bottom-bar" v-if="addresses.length>0">
+    <button class="add-btn" @click="openAdd">新增收货地址</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       表单弹窗 (居中卡片覆盖层)
+       ═══════════════════════════════════════════ -->
+  <van-overlay :show="showForm" @click="closeForm" z-index="1000">
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;padding:0" @click.stop="">
+      <div class="form-overlay-card">
+        <div class="form-header">
+          <span class="form-header-close" @click="closeForm">✕</span>
+          <span class="form-header-title">{{ isEdit ? '编辑地址' : '新增地址' }}</span>
+        </div>
+        <div class="form-body">
+          <!-- 收货人 -->
+          <div class="form-field">
+            <div class="form-field-label">收货人</div>
+            <input class="form-field-input" v-model="form.name" placeholder="请输入收货人姓名" maxlength="20" />
+          </div>
+          <!-- 手机号 -->
+          <div class="form-field">
+            <div class="form-field-label">手机号码</div>
+            <input class="form-field-input" v-model="form.phone" type="tel" placeholder="请输入手机号码" maxlength="11" />
+          </div>
+          <!-- 地址选点 -->
+          <div class="form-field-label" style="margin-bottom:6px">收货地址</div>
+          <!-- 已选地址 -->
+          <div class="addr-picked-text" v-if="form.fullAddress" @click="openMap">
+            <span>📍</span>
+            <span style="flex:1">{{ form.fullAddress }}</span>
+            <span style="color:var(--primary);font-size:12px;flex-shrink:0">修改 ›</span>
+          </div>
+          <!-- 未选地址 -->
+          <div class="addr-pick-btn" v-if="!form.fullAddress" @click="openMap">
+            <span>📍</span><span>点击地图选择收货地址</span>
+          </div>
+          <!-- 门牌号补充 -->
+          <div class="form-field">
+            <input class="form-field-input" v-model="form.detail" placeholder="补充详细地址：小区/楼栋/门牌号" maxlength="100" />
+          </div>
+          <!-- 设为默认 -->
+          <div class="form-switch-row">
+            <span class="form-switch-label">设为默认收货地址</span>
+            <van-switch v-model="form.isDefault" size="22px" active-color="#FF7D00"></van-switch>
+          </div>
+        </div>
+        <div style="padding:0 16px 16px;flex-shrink:0">
+          <button class="form-submit-btn" :class="{disabled:!canSave}" @click="saveAddr">
+            {{ isEdit ? '保存修改' : '保存地址' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </van-overlay>
+
+  <!-- ═══════════════════════════════════════════
+       地图选点弹窗 (居中卡片覆盖层)
+       ═══════════════════════════════════════════ -->
+  <van-overlay :show="showMap" @click="closeMap" z-index="2000">
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;padding:0" @click.stop="">
+      <div class="map-card">
+        <div class="map-header">
+          <span class="map-close" @click="closeMap">✕</span>
+          <span class="map-title">选择收货地址</span>
+        </div>
+        <div class="map-search-bar">
+          <input class="map-search-input" v-model="mapSearchKeyword" placeholder="搜索地点名称" @keyup.enter="doMapSearch" />
+          <button class="map-search-btn" @click="doMapSearch">搜索</button>
+        </div>
+        <div class="map-container" id="addr-map-container">
+          <div class="map-pin">📍</div>
+          <div class="map-locating" v-if="mapLocating">
+            <span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite"></span>
+            定位中...
+          </div>
+        </div>
+        <div class="map-footer">
+          <div class="map-footer-addr">{{ mapPickedAddr || '拖动地图选择位置' }}</div>
+          <button class="map-footer-confirm" @click="confirmMapPick">确认选点</button>
+        </div>
+      </div>
+    </div>
+  </van-overlay>
+</div>
+
+<script>
+var app = Vue.createApp({
+  setup: function() {
+    requireAuth();
+    var goPage = window.goPage;
+
+    /* ── 状态 ── */
+    var loading = Vue.ref(true);
+    var refreshing = Vue.ref(false);
+    var showForm = Vue.ref(false);
+    var showMap = Vue.ref(false);
+    var isEdit = Vue.ref(false);
+    var editId = Vue.ref(null);
+
+    var form = Vue.reactive({
+      name: '', phone: '', fullAddress: '',
+      province: '', city: '', district: '',
+      detail: '', isDefault: false,
+      lat: null, lng: null
+    });
+
+    var addresses = Vue.reactive([]);
+
+    /* ── 表单校验 ── */
+    var canSave = Vue.computed(function() {
+      return form.name.trim()
+        && /^1[3-9]\d{9}$/.test(form.phone)
+        && form.fullAddress.trim();
+    });
+
+    /* ── 拉取地址列表 ── */
+    function fetchAddresses() {
+      loading.value = true;
+      request('/api/v1/user/addresses').then(function(res) {
+        if (res && res.code === 0 && res.data && res.data.items) {
+          addresses.splice(0, addresses.length);
+          res.data.items.forEach(function(a) { addresses.push(a); });
+        }
+      }).catch(function() {}).finally(function() { loading.value = false; refreshing.value = false; });
+    }
+    Vue.onMounted(function() { fetchAddresses(); });
+
+    var onRefresh = function() { refreshing.value = true; fetchAddresses(); };
+
+    /* ── 表单打开/关闭 ── */
+    var openAdd = function() {
+      isEdit.value = false; editId.value = null;
+      Object.assign(form, {
+        name: '', phone: '', fullAddress: '',
+        province: '', city: '', district: '',
+        detail: '', isDefault: false,
+        lat: null, lng: null
+      });
+      showForm.value = true;
+    };
+
+    var openEdit = function(addr) {
+      isEdit.value = true; editId.value = addr.id;
+      Object.assign(form, {
+        name: addr.name || '',
+        phone: addr.phone || '',
+        fullAddress: addr.fullAddress || (addr.province || '') + (addr.city || '') + (addr.district || '') + ' ' + (addr.detail || ''),
+        province: addr.province || '',
+        city: addr.city || '',
+        district: addr.district || '',
+        detail: '',
+        isDefault: addr.isDefault || false,
+        lat: null, lng: null
+      });
+      showForm.value = true;
+    };
+
+    var closeForm = function() {
+      showForm.value = false;
+    };
+
+    /* ── 保存地址 ── */
+    var saveAddr = function() {
+      if (!form.name.trim()) { vant.showToast('请输入收货人姓名'); return; }
+      if (!/^1[3-9]\d{9}$/.test(form.phone)) { vant.showToast('请输入正确的手机号码'); return; }
+      if (!form.fullAddress.trim()) { vant.showToast('请选择收货地址'); return; }
+
+      // 拼接详细地址
+      var fullDetail = form.fullAddress.trim();
+      if (form.detail.trim()) {
+        fullDetail = fullDetail + ' ' + form.detail.trim();
+      }
+
+      var body = {
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        province: form.province || '',
+        city: form.city || '',
+        district: form.district || '',
+        detail: fullDetail,
+        isDefault: form.isDefault
+      };
+
+      var req;
+      if (isEdit.value) {
+        req = request('/api/v1/user/addresses/' + editId.value, { method: 'PUT', body: body });
+      } else {
+        req = request('/api/v1/user/addresses', { method: 'POST', body: body });
+      }
+      req.then(function(res) {
+        if (res && res.code === 0) {
+          showForm.value = false;
+          vant.showSuccessToast(isEdit.value ? '地址已更新' : '地址已添加');
+          fetchAddresses();
+        }
+      }).catch(function() {});
+    };
+
+    /* ── 设为默认 ── */
+    var setDefault = function(addr) {
+      var body = {
+        name: addr.name, phone: addr.phone,
+        province: addr.province || '', city: addr.city || '', district: addr.district || '',
+        detail: addr.detail || '', isDefault: true
+      };
+      request('/api/v1/user/addresses/' + addr.id, { method: 'PUT', body: body })
+        .then(function(res) { if (res && res.code === 0) fetchAddresses(); })
+        .catch(function() {});
+    };
+
+    /* ── 删除地址 ── */
+    var confirmDel = function(addr) {
+      vant.showConfirmDialog({
+        title: '删除地址',
+        message: '确定要删除这个收货地址吗？',
+        confirmButtonText: '删除',
+        confirmButtonColor: '#FF4D4F'
+      }).then(function() {
+        request('/api/v1/user/addresses/' + addr.id, { method: 'DELETE' })
+          .then(function(res) {
+            if (res && res.code === 0) { vant.showSuccessToast('已删除'); fetchAddresses(); }
+          }).catch(function() {});
+      }).catch(function() {});
+    };
+
+    var selectAddr = function(addr) {
+      localStorage.setItem('halfcart_selected_addr', JSON.stringify(addr));
+      var redirect = getQueryParam('redirect');
+      if (redirect) {
+        location.href = decodeURIComponent(redirect);
+      } else {
+        vant.showToast('已选择: ' + (addr.fullAddress || addr.province + addr.city + addr.district));
+      }
+    };
+    var goBack = function() { history.back(); };
+
+    /* ══════════════════════════════════════
+       高德地图 JSAPI v2.0
+       ══════════════════════════════════════ */
+    var AMapLib = null;
+    var amapReady = Vue.ref(false);
+    var mapSearchKeyword = Vue.ref('');
+    var mapPickedAddr = Vue.ref('');
+    var mapLocating = Vue.ref(false);
+    var mapPickedLat = 0, mapPickedLng = 0;
+    var mapPickedProvince = '', mapPickedCity = '', mapPickedDistrict = '';
+    var amapInstance = null, amapGeocoder = null, amapPlaceSearch = null, amapGeolocation = null;
+
+    // 初始化 AMap
+    if (typeof AMapLoader !== 'undefined') {
+      AMapLoader.load({
+        key: window.AMAP_CONFIG.webKey,
+        version: '2.0',
+        plugins: ['AMap.Geocoder', 'AMap.PlaceSearch', 'AMap.Geolocation'],
+      }).then(function(AMap) {
+        AMap.getConfig().appname = 'halfcart';
+        AMapLib = AMap;
+        amapReady.value = true;
+      }).catch(function(e) {
+        console.error('[AMap] 加载失败:', e);
+      });
+    }
+
+    // 初始化地图实例
+    var initMap = function() {
+      var container = document.getElementById('addr-map-container');
+      if (!container || amapInstance) return;
+      if (!AMapLib) { vant.showToast('地图加载中，请稍后重试'); return; }
+
+      var centerLng = form.lng || 116.481488;
+      var centerLat = form.lat || 39.990464;
+
+      amapInstance = new AMapLib.Map('addr-map-container', {
+        zoom: 15, center: [centerLng, centerLat], resizeEnable: true, viewMode: '2D',
+      });
+      amapGeocoder = new AMapLib.Geocoder({ city: '全国' });
+      amapPlaceSearch = new AMapLib.PlaceSearch({ city: '全国', pageSize: 10 });
+      amapGeolocation = new AMapLib.Geolocation({
+        enableHighAccuracy: true, timeout: 5000,
+        GeoLocationFirst: true,
+      });
+
+      // 拖拽后逆地理编码
+      amapInstance.on('moveend', function() {
+        var c = amapInstance.getCenter();
+        mapPickedLat = c.lat; mapPickedLng = c.lng;
+        amapGeocoder.getAddress([c.lng, c.lat], function(status, result) {
+          if (status === 'complete' && result.regeocode) {
+            mapPickedAddr.value = result.regeocode.formattedAddress || '';
+            var ac = result.regeocode.addressComponent;
+            if (ac) {
+              mapPickedProvince = ac.province || '';
+              mapPickedCity = ac.city || '';
+              mapPickedDistrict = ac.district || '';
+            }
+          }
+        });
+      });
+
+      // 高德定位
+      mapLocating.value = true;
+      amapGeolocation.getCurrentPosition(function(status, result) {
+        mapLocating.value = false;
+        if (status === 'complete' && result.position) {
+          var pos = [result.position.lng, result.position.lat];
+          amapInstance.setZoom(16);
+          amapInstance.setCenter(pos);
+          mapPickedLat = result.position.lat;
+          mapPickedLng = result.position.lng;
+          amapGeocoder.getAddress(pos, function(geoStatus, geoResult) {
+            if (geoStatus === 'complete' && geoResult.regeocode) {
+              mapPickedAddr.value = geoResult.regeocode.formattedAddress || '';
+              var ac = geoResult.regeocode.addressComponent;
+              if (ac) {
+                mapPickedProvince = ac.province || '';
+                mapPickedCity = ac.city || '';
+                mapPickedDistrict = ac.district || '';
+              }
+            }
+          });
+        } else {
+          // 回退：用默认坐标逆地理
+          mapLocating.value = false;
+          amapGeocoder.getAddress([centerLng, centerLat], function(geoStatus, geoResult) {
+            if (geoStatus === 'complete' && geoResult.regeocode) {
+              mapPickedAddr.value = geoResult.regeocode.formattedAddress || '';
+            }
+          });
+        }
+      });
+    };
+
+    // 打开地图
+    var openMap = function() {
+      showMap.value = true;
+      mapSearchKeyword.value = '';
+      mapPickedAddr.value = form.fullAddress || '';
+      mapPickedLat = form.lat || 0;
+      mapPickedLng = form.lng || 0;
+      mapPickedProvince = form.province || '';
+      mapPickedCity = form.city || '';
+      mapPickedDistrict = form.district || '';
+      Vue.nextTick(function() { setTimeout(initMap, 300); });
+    };
+
+    // POI 搜索
+    var doMapSearch = function() {
+      var kw = mapSearchKeyword.value.trim();
+      if (!kw || !amapPlaceSearch) return;
+      amapPlaceSearch.search(kw, function(status, result) {
+        if (status === 'complete' && result.poiList && result.poiList.pois.length > 0) {
+          var poi = result.poiList.pois[0];
+          var pos = [poi.location.lng, poi.location.lat];
+          amapInstance.setCenter(pos);
+          amapInstance.setZoom(17);
+          mapPickedLat = poi.location.lat; mapPickedLng = poi.location.lng;
+          mapPickedAddr.value = poi.pname + poi.cityname + poi.adname + poi.name;
+          mapPickedProvince = poi.pname || ''; mapPickedCity = poi.cityname || ''; mapPickedDistrict = poi.adname || '';
+        } else {
+          vant.showToast('未找到相关地点');
+        }
+      });
+    };
+
+    // 确认地图选点
+    var confirmMapPick = function() {
+      if (!mapPickedAddr.value) { vant.showToast('请先选择位置'); return; }
+      form.fullAddress = mapPickedAddr.value;
+      form.province = mapPickedProvince;
+      form.city = mapPickedCity;
+      form.district = mapPickedDistrict;
+      form.lat = mapPickedLat;
+      form.lng = mapPickedLng;
+      // 不覆盖 detail，用户可能已手动填写门牌号
+      showMap.value = false;
+    };
+
+    // 关闭地图
+    var closeMap = function() {
+      showMap.value = false;
+      if (amapInstance) { amapInstance.destroy(); amapInstance = null; amapGeocoder = null; amapPlaceSearch = null; amapGeolocation = null; }
+    };
+
+    return {
+      loading, refreshing, showForm, showMap, isEdit, form, addresses, canSave,
+      mapSearchKeyword, mapPickedAddr, mapLocating,
+      openAdd, openEdit, closeForm, saveAddr, setDefault, confirmDel, selectAddr, goBack,
+      openMap, doMapSearch, confirmMapPick, closeMap, onRefresh
+    };
+  }
+});
+app.use(vant).mount('#app');
+</script>
+</body>
+</html>

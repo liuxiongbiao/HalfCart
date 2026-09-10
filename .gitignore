@@ -1,0 +1,44 @@
+# ── 环境变量 (含密钥, 禁止提交) ──
+.env
+.env.*
+!.env.example
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── IDE ──
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── 数据持久化 ──
+data/
+
+# ── 日志 ──
+*.log
+
+# ── 前端构建 ──
+node_modules/
+dist/
+
+# ── 系统文件 ──
+.DS_Store
+Thumbs.db
+
+# ── Windows 保留设备名 ──
+NUL
+# ── Docker ──
+docker-compose.override.yml
+
+# ── TLS 证书 (禁止提交) ──
+*.pem
+*.key
+*.crt

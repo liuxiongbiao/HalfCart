@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 申请提现</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" />
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   HalfCart H5 全局设计规范 V1.0
+   主色:#FF7D00 | 背景:#F5F7FA | 圆角12px
+   ═══════════════════════════════════════════ */
+:root {
+  --primary:#FF7D00; --primary-light:rgba(255,125,0,.10);
+  --bg:#F5F7FA; --card-bg:rgba(255,255,255,.85);
+  --title:#1D2129; --body:#4E5969; --hint:#86909C;
+  --border:#E5E6EB;
+  --shadow:0 2px 12px rgba(0,0,0,.06);
+  --radius:12px; --radius-btn:24px;
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--body);-webkit-font-smoothing:antialiased;
+  display:flex;justify-content:center;min-height:100vh
+}
+#app{
+  width:100%;max-width:480px;min-height:100vh;background:var(--bg);
+  position:relative;overflow-x:hidden;
+  padding-top:56px;padding-bottom:calc(96px + var(--safe-bottom))
+}
+
+/* ── 顶部导航 ── */
+.nav-bar{
+  position:fixed;top:0;z-index:100;width:100%;max-width:480px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;height:56px;padding:0 16px;gap:12px;
+  background:rgba(255,255,255,.88);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,0,0,.04)
+}
+.nav-back{font-size:22px;color:var(--title);flex-shrink:0;cursor:pointer}
+.nav-title{flex:1;text-align:center;font-size:17px;font-weight:600;color:var(--title)}
+.nav-right{font-size:14px;color:var(--primary);font-weight:500;flex-shrink:0;cursor:pointer}
+
+/* ── 通用卡片 ── */
+.card{
+  margin:12px 16px 0;padding:16px;
+  background:var(--card-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.6)
+}
+.module-title{font-size:13px;font-weight:600;color:var(--hint);margin-bottom:12px;letter-spacing:.5px}
+
+/* ── 余额卡片 ── */
+.balance-row{display:flex;align-items:center;justify-content:space-between}
+.balance-label{font-size:13px;color:var(--hint)}
+.balance-value{font-size:24px;font-weight:700;color:var(--primary)}
+.balance-all{
+  padding:4px 12px;border-radius:14px;background:var(--primary-light);
+  color:var(--primary);font-size:12px;font-weight:500;cursor:pointer;transition:all .25s ease
+}
+.balance-all:active{transform:scale(.94)}
+.balance-all.disabled{opacity:.4;pointer-events:none}
+
+/* ── 金额输入 ── */
+.amount-input-wrap{
+  position:relative;display:flex;align-items:center;margin-top:4px
+}
+.amount-prefix{
+  font-size:28px;font-weight:600;color:var(--primary);margin-right:4px;flex-shrink:0
+}
+.amount-input{
+  flex:1;height:48px;border:none;background:transparent;outline:none;
+  font-size:28px;font-weight:600;color:var(--title);caret-color:var(--primary);
+  font-family:"SF Mono","Menlo",monospace
+}
+.amount-input::placeholder{color:var(--border);font-size:22px;font-weight:400}
+.amount-hint{font-size:12px;color:var(--hint);margin-top:8px;display:flex;align-items:center;gap:4px}
+
+/* ── 快捷金额 ── */
+.quick-amounts{display:flex;gap:8px;margin-top:10px}
+.quick-tag{
+  flex:1;height:34px;border-radius:17px;border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:500;color:var(--body);cursor:pointer;
+  transition:all .2s;background:#F7F8FA
+}
+.quick-tag:active{background:var(--primary-light);border-color:var(--primary);color:var(--primary)}
+.quick-tag.active{background:var(--primary-light);border-color:var(--primary);color:var(--primary)}
+
+/* ── 收款方式 ── */
+.pay-option{
+  display:flex;align-items:center;padding:13px 0;cursor:pointer;transition:all .25s ease
+}
+.pay-option:active{opacity:.7}
+.pay-option+.pay-option{border-top:1px solid rgba(0,0,0,.04)}
+.pay-icon-wrap{
+  width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:22px;margin-right:12px;flex-shrink:0
+}
+.pay-icon-wrap.alipay{background:rgba(22,119,255,.08)}
+.pay-icon-wrap.wechat{background:rgba(7,193,96,.08)}
+.pay-info{flex:1}
+.pay-name{font-size:14px;font-weight:500;color:var(--title)}
+.pay-hint-text{font-size:11px;color:var(--hint)}
+.pay-radio{
+  width:22px;height:22px;border-radius:50%;flex-shrink:0;transition:all .25s ease;
+  display:flex;align-items:center;justify-content:center
+}
+.pay-radio.checked{background:var(--primary)}
+.pay-radio.unchecked{border:2px solid var(--border);background:#fff}
+.pay-radio.checked::after{content:'';width:8px;height:8px;border-radius:50%;background:#fff}
+
+/* ── 已保存账户选择 ── */
+.saved-accts{margin-top:8px}
+.saved-acct-item{
+  display:flex;align-items:center;padding:8px 10px;gap:8px;border-radius:8px;
+  background:#F7F8FA;cursor:pointer;transition:all .2s;margin-bottom:6px
+}
+.saved-acct-item:active{background:var(--primary-light)}
+.saved-acct-item.selected{background:var(--primary-light);border:1px solid var(--primary)}
+.saved-acct-type{font-size:11px;padding:2px 6px;border-radius:4px;font-weight:500;flex-shrink:0}
+.saved-acct-type.alipay{background:rgba(22,119,255,.12);color:#1677FF}
+.saved-acct-type.wechat{background:rgba(7,193,96,.12);color:#07C160}
+.saved-acct-name{font-size:13px;color:var(--title);font-weight:500}
+.saved-acct-acct{font-size:12px;color:var(--hint);flex:1;text-align:right}
+.saved-acct-default{font-size:10px;color:var(--primary);flex-shrink:0}
+
+/* ── 收款信息输入 ── */
+.form-field{margin-bottom:14px}
+.form-label{font-size:13px;color:var(--hint);margin-bottom:6px;font-weight:500}
+.form-input{
+  width:100%;height:44px;border:1px solid var(--border);border-radius:10px;
+  padding:0 14px;font-size:14px;color:var(--title);outline:none;background:#F7F8FA;
+  transition:border-color .2s;caret-color:var(--primary)
+}
+.form-input:focus{border-color:var(--primary);background:#fff}
+
+/* ── 到账说明 ── */
+.tip-title{font-size:14px;font-weight:600;color:var(--title);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.tip-item{display:flex;gap:8px;font-size:13px;color:var(--hint);line-height:1.7;padding:4px 0}
+.tip-num{flex-shrink:0;width:18px;height:18px;border-radius:50%;background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.tip-highlight{color:var(--primary);font-weight:500}
+
+/* ── 底部提交栏 ── */
+.submit-bar{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:100;
+  padding:10px 16px calc(10px + var(--safe-bottom));
+  background:rgba(255,255,255,.92);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);border-top:1px solid rgba(0,0,0,.04)
+}
+.submit-btn{
+  width:100%;height:48px;border-radius:var(--radius-btn);border:none;
+  background:linear-gradient(135deg,#FF9A3C,var(--primary));
+  color:#fff;font-size:16px;font-weight:600;letter-spacing:.5px;
+  box-shadow:0 4px 16px rgba(255,125,0,.30);cursor:pointer;transition:all .25s ease
+}
+.submit-btn:active{transform:scale(.96);opacity:.9}
+.submit-btn.disabled{background:#C9CDD4;box-shadow:none;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ═══ 顶部导航 ═══ -->
+  <div class="nav-bar">
+    <span class="nav-back" @click="goBack">←</span>
+    <span class="nav-title">申请提现</span>
+    <span class="nav-right" @click="goRecords">提现记录 ›</span>
+  </div>
+
+  <!-- ═══ 可提现余额 ═══ -->
+  <div class="card">
+    <div class="balance-row">
+      <span class="balance-label">可提现余额（元）</span>
+      <span class="balance-all" :class="{disabled:parseFloat(wallet.available)<=0}" @click="fillAll">全部提现</span>
+    </div>
+    <div class="balance-row" style="margin-top:4px">
+      <span class="balance-value">¥{{ wallet.available }}</span>
+    </div>
+  </div>
+
+  <!-- ═══ 提现金额 ═══ -->
+  <div class="card">
+    <div class="module-title">提现金额</div>
+    <div class="amount-input-wrap">
+      <span class="amount-prefix">¥</span>
+      <input class="amount-input" v-model="amount" type="number" inputmode="decimal"
+        placeholder="0.00" min="0" step="0.01" @input="onAmountInput" />
+    </div>
+    <!-- 快捷金额 -->
+    <div class="quick-amounts">
+      <div class="quick-tag" :class="{active:amount==='50'}" @click="setQuick('50')">¥50</div>
+      <div class="quick-tag" :class="{active:amount==='100'}" @click="setQuick('100')">¥100</div>
+      <div class="quick-tag" :class="{active:amount==='200'}" @click="setQuick('200')">¥200</div>
+      <div class="quick-tag" @click="fillAll">全部</div>
+    </div>
+    <div class="amount-hint">📌 单笔最低提现 ¥10.00，无手续费</div>
+  </div>
+
+  <!-- ═══ 收款方式 ═══ -->
+  <div class="card">
+    <div class="module-title">收款方式</div>
+    <div class="pay-option" @click="payMethod='alipay'">
+      <div class="pay-icon-wrap alipay">
+        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#1677FF"/><text x="12" y="16" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">支</text></svg>
+      </div>
+      <div class="pay-info"><div class="pay-name">支付宝</div><div class="pay-hint-text">1-3 个工作日到账</div></div>
+      <div class="pay-radio" :class="payMethod==='alipay'?'checked':'unchecked'"></div>
+    </div>
+    <div class="pay-option" @click="payMethod='wechat'">
+      <div class="pay-icon-wrap wechat">
+        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#07C160"/><text x="12" y="16" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">微</text></svg>
+      </div>
+      <div class="pay-info"><div class="pay-name">微信</div><div class="pay-hint-text">1-3 个工作日到账</div></div>
+      <div class="pay-radio" :class="payMethod==='wechat'?'checked':'unchecked'"></div>
+    </div>
+
+    <!-- 已保存账户 -->
+    <div class="saved-accts" v-if="savedAccts.length>0">
+      <div style="font-size:12px;color:var(--hint);margin-bottom:6px;">已保存的{{ payMethod==='alipay'?'支付宝':'微信' }}账户</div>
+      <div class="saved-acct-item" v-for="sa in savedAccts" :key="sa.id"
+        :class="{selected:selectedSavedId===sa.id}" @click="selectSaved(sa)">
+        <span class="saved-acct-type" :class="sa.type">{{ sa.type==='alipay'?'支付宝':'微信' }}</span>
+        <span class="saved-acct-name">{{ sa.realName }}</span>
+        <span class="saved-acct-acct">{{ maskAccount(sa.account) }}</span>
+        <span class="saved-acct-default" v-if="sa.isDefault">默认</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 收款人信息 ═══ -->
+  <div class="card">
+    <div class="module-title">收款人信息</div>
+    <div class="form-field">
+      <div class="form-label">收款人姓名</div>
+      <input class="form-input" v-model="payeeName" placeholder="请输入实名认证姓名" maxlength="20" />
+    </div>
+    <div class="form-field" style="margin-bottom:0">
+      <div class="form-label">{{ payMethod==='alipay'?'支付宝账号':'微信绑定手机号' }}</div>
+      <input class="form-input" v-model="payeeAccount" :placeholder="payMethod==='alipay'?'手机号或邮箱':'11位手机号'" maxlength="50" />
+    </div>
+  </div>
+
+  <!-- ═══ 到账说明 ═══ -->
+  <div class="card">
+    <div class="tip-title">📋 到账说明</div>
+    <div class="tip-item"><span class="tip-num">1</span><span>提交申请后，平台将在 1 个工作日内完成审核处理</span></div>
+    <div class="tip-item"><span class="tip-num">2</span><span>审核通过后，资金将自动转入您选择的收款账户，<span class="tip-highlight">下一次打款日：{{ nextTuesday }}</span></span></div>
+    <div class="tip-item"><span class="tip-num">3</span><span>法定节假日到账时间可能顺延，请耐心等待</span></div>
+  </div>
+
+  <!-- ═══ 底部提交栏 ═══ -->
+  <div class="submit-bar">
+    <button class="submit-btn" :class="{disabled:!canSubmit}" @click="onSubmit">
+      {{ canSubmit ? '确认提现' : submitHint }}
+    </button>
+  </div>
+</div>
+
+<script>
+var app = Vue.createApp({
+  setup: function() {
+    requireAuth();
+    var goPage = window.goPage;
+    var request = window.request;
+
+    /* ── 账户 ── */
+    var wallet = Vue.reactive({ available: '0.00' });
+    var amount = Vue.ref('');
+    var payMethod = Vue.ref('alipay');
+    var payeeName = Vue.ref('');
+    var payeeAccount = Vue.ref('');
+    var selectedSavedId = Vue.ref(null);
+
+    /* ── 已保存账户 (从后端API加载) ── */
+    var savedAccts = Vue.reactive([]);
+    async function loadSavedAccts() {
+      try {
+        var res = await request('/api/v1/user/payment-accounts');
+        var all = (res && res.items) ? res.items : [];
+        savedAccts.splice(0, savedAccts.length);
+        all.forEach(function(a) {
+          savedAccts.push({
+            id: a.id,
+            type: a.accountType === 1 ? 'wechat' : 'alipay',
+            realName: a.realName,
+            account: a.account,
+            isDefault: a.isDefault
+          });
+        });
+        // 自动选中默认账户
+        var def = savedAccts.find(function(a) { return a.isDefault; });
+        if (def) { selectSaved(def); }
+      } catch(e) {}
+    }
+
+    var maskedCache = {};
+    var maskAccount = function(acct) {
+      if (!acct || acct.length <= 7) return acct || '';
+      if (maskedCache[acct]) return maskedCache[acct];
+      maskedCache[acct] = acct.slice(0, 3) + '****' + acct.slice(-4);
+      return maskedCache[acct];
+    };
+
+    var selectSaved = function(sa) {
+      selectedSavedId.value = sa.id;
+      payeeName.value = sa.realName;
+      payeeAccount.value = sa.account;
+    };
+
+    Vue.onMounted(async function() {
+      await loadSavedAccts();
+      fetchBalance();
+    });
+
+    /* ── 下一个周二 ── */
+    var nextTuesday = Vue.ref('');
+    function updateNextTuesday() {
+      var now = new Date();
+      var day = now.getDay();
+      var diff = day <= 2 ? (2 - day) : (9 - day);
+      if (day === 2 && now.getHours() >= 12) diff = 7;
+      var target = new Date(now);
+      target.setDate(now.getDate() + diff);
+      nextTuesday.value = (target.getMonth()+1) + '月' + target.getDate() + '日（周二）';
+    }
+    updateNextTuesday();
+
+    /* ── 快捷金额 ── */
+    var setQuick = function(val) {
+      amount.value = val;
+    };
+
+    /* ── 校验 ── */
+    var minAmount = 10.00;
+    var canSubmit = Vue.computed(function() {
+      var v = parseFloat(amount.value);
+      var amountOk = !isNaN(v) && v >= minAmount && v <= parseFloat(wallet.available);
+      var nameOk = payeeName.value.trim().length > 0;
+      var acct = payeeAccount.value.trim();
+      var acctOk = false;
+      if (payMethod.value === 'alipay') {
+        acctOk = /^1[3-9]\d{9}$/.test(acct) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(acct);
+      } else {
+        acctOk = /^1[3-9]\d{9}$/.test(acct);
+      }
+      return amountOk && nameOk && acctOk;
+    });
+
+    var submitHint = Vue.computed(function() {
+      if (!amount.value) return '请输入提现金额';
+      var v = parseFloat(amount.value);
+      if (isNaN(v) || v < minAmount) return '最低提现 ¥' + minAmount.toFixed(2);
+      if (v > parseFloat(wallet.available)) return '超出可提现余额';
+      if (!payeeName.value.trim()) return '请输入收款人姓名';
+      if (!payeeAccount.value.trim()) return '请输入收款账号';
+      return '确认提现';
+    });
+
+    /* ── 方法 ── */
+    var fillAll = function() {
+      if (parseFloat(wallet.available) <= 0) return;
+      amount.value = wallet.available;
+    };
+    var onAmountInput = function() {
+      var v = parseFloat(amount.value);
+      if (v > parseFloat(wallet.available)) {
+        vant.showNotify({type:'warning',message:'提现金额不能超过可提现余额',duration:1500});
+      }
+    };
+    var onSubmit = function() {
+      if (!canSubmit.value) return;
+      var methodLabel = payMethod.value==='alipay'?'支付宝':'微信';
+      vant.showConfirmDialog({
+        title:'确认提现',
+        message:'提现金额：¥'+parseFloat(amount.value).toFixed(2)+'\n收款方式：'+methodLabel+'\n收款人：'+payeeName.value.trim()+'\n账号：'+payeeAccount.value.trim()+'\n\n确认提交提现申请？',
+        confirmButtonText:'确认', confirmButtonColor:'#FF7D00',
+      }).then(function() {
+        request('/api/v1/withdraw/apply', {
+          method:'POST',
+          body:{
+            amount: parseFloat(amount.value),
+            pay_method: payMethod.value==='alipay'?2:1,
+            payee_name: payeeName.value.trim(),
+            payee_account: payeeAccount.value.trim()
+          }
+        }).then(function(res) {
+          if (res && res.code === 0) {
+            vant.showSuccessToast('申请已提交');
+            setTimeout(function() { goPage('wallet-board.html'); }, 1500);
+          }
+        }).catch(function() {});
+      }).catch(function() {});
+    };
+
+    var goBack = function() { history.back(); };
+    var goRecords = function() { goPage('wallet-record.html?filter=withdraw'); };
+
+    function fetchBalance() {
+      request('/api/v1/user/home').then(function(res) {
+        if (res && res.code === 0 && res.data && res.data.profile) {
+          wallet.available = res.data.profile.walletBalance || '0.00';
+        }
+      }).catch(function() {});
+    }
+
+    return {
+      wallet, amount, payMethod, payeeName, payeeAccount, savedAccts, selectedSavedId,
+      minAmount, canSubmit, submitHint, nextTuesday,
+      fillAll, onAmountInput, setQuick, selectSaved, maskAccount, onSubmit,
+      goBack, goRecords
+    };
+  }
+});
+app.use(vant).mount('#app');
+</script>
+</body>
+</html>

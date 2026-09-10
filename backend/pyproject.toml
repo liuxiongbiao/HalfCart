@@ -1,0 +1,40 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: slow tests (deselect with '-m \"not slow\"')",
+    "integration: integration tests requiring external services",
+    "unit: pure unit tests with no external dependencies",
+]
+# 测试环境覆盖
+env = [
+    "APP_ENV=development",
+    "TEST_MODE=true",
+    "MOCK_PAYMENT=true",
+    "DB_NAME=halfcart",
+    "DB_ECHO=false",
+]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--disable-warnings",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/api/v1/test_*.py", "app/tasks/*", "tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+]

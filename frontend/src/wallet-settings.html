@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 收款设置</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" />
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   HalfCart H5 全局设计规范 V1.0
+   主色:#FF7D00 | 警示:#FF4D4F | 背景:#F5F7FA
+   ═══════════════════════════════════════════ */
+:root {
+  --primary:#FF7D00; --primary-light:rgba(255,125,0,.10);
+  --danger:#FF4D4F; --success:#52C41A;
+  --bg:#F5F7FA; --card-bg:rgba(255,255,255,.85);
+  --title:#1D2129; --body:#4E5969; --hint:#86909C;
+  --border:#E5E6EB;
+  --shadow:0 2px 12px rgba(0,0,0,.06);
+  --radius:12px; --radius-btn:24px;
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--body);-webkit-font-smoothing:antialiased;
+  display:flex;justify-content:center;min-height:100vh
+}
+#app{
+  width:100%;max-width:480px;min-height:100vh;background:var(--bg);
+  position:relative;overflow-x:hidden;
+  padding-top:56px;padding-bottom:calc(88px + var(--safe-bottom))
+}
+
+/* ── 顶部导航 ── */
+.nav-bar{
+  position:fixed;top:0;z-index:100;width:100%;max-width:480px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;height:56px;padding:0 16px;gap:12px;
+  background:rgba(255,255,255,.88);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,0,0,.04)
+}
+.nav-back{font-size:22px;color:var(--title);flex-shrink:0;cursor:pointer}
+.nav-title{flex:1;text-align:center;font-size:17px;font-weight:600;color:var(--title)}
+
+/* ── 账户卡片 ── */
+.account-card{
+  margin:12px 16px 0;padding:14px 16px;
+  background:var(--card-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.6);
+  transition:all .25s ease
+}
+.account-card:active{transform:scale(.98)}
+.acct-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.acct-type-row{display:flex;align-items:center;gap:8px}
+.acct-type-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.acct-type-icon.alipay{background:rgba(22,119,255,.10)}
+.acct-type-icon.wechat{background:rgba(7,193,96,.10)}
+.acct-type-name{font-size:14px;font-weight:600;color:var(--title)}
+.acct-default-tag{
+  padding:2px 8px;border-radius:4px;background:var(--primary-light);color:var(--primary);
+  font-size:10px;font-weight:600;flex-shrink:0
+}
+.acct-info{font-size:13px;color:var(--body);margin-bottom:4px}
+.acct-account{font-size:15px;color:var(--title);font-family:"SF Mono","Menlo",monospace;letter-spacing:.5px}
+.acct-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.04)}
+.acct-default-btn{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--hint);cursor:pointer}
+.acct-default-btn .radio{
+  width:18px;height:18px;border-radius:50%;border:2px solid var(--hint);display:flex;
+  align-items:center;justify-content:center;transition:all .25s ease;flex-shrink:0
+}
+.acct-default-btn .radio.checked{background:var(--primary);border-color:var(--primary)}
+.acct-default-btn .radio.checked::after{content:'';width:6px;height:6px;border-radius:50%;background:#fff}
+.acct-actions{display:flex;gap:12px}
+.acct-action{font-size:13px;cursor:pointer;padding:2px 0;transition:all .25s ease}
+.acct-action:active{opacity:.7}
+.acct-action.edit{color:var(--primary)}
+.acct-action.del{color:var(--danger)}
+
+/* ── 空状态 ── */
+.empty-state{text-align:center;padding:64px 20px;color:var(--hint)}
+.empty-icon{font-size:56px;margin-bottom:12px;display:block}
+.empty-text{font-size:14px;margin-bottom:4px}
+.empty-hint{font-size:12px;color:var(--border)}
+
+/* ── 底部按钮 ── */
+.bottom-bar{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:100;
+  padding:10px 16px calc(10px + var(--safe-bottom));
+  background:rgba(255,255,255,.92);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);border-top:1px solid rgba(0,0,0,.04)
+}
+.add-btn{
+  width:100%;height:48px;border-radius:var(--radius-btn);border:none;
+  background:linear-gradient(135deg,#FF9A3C,var(--primary));color:#fff;
+  font-size:16px;font-weight:600;box-shadow:0 4px 16px rgba(255,125,0,.30);
+  cursor:pointer;transition:all .25s ease
+}
+.add-btn:active{transform:scale(.96)}
+
+/* ── 表单弹窗（居中卡片） ── */
+.form-overlay-card{
+  display:flex;flex-direction:column;width:100%;max-width:400px;max-height:80vh;
+  background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.15);
+  margin:0 16px
+}
+.form-header{
+  display:flex;align-items:center;padding:14px 16px;gap:12px;
+  border-bottom:1px solid #F0F1F3;flex-shrink:0
+}
+.form-close{font-size:20px;cursor:pointer;color:var(--hint);flex-shrink:0}
+.form-title{font-size:16px;font-weight:600;color:var(--title);flex:1}
+.form-body{padding:16px;overflow-y:auto;flex:1}
+.form-group{margin-bottom:16px}
+.form-label{font-size:13px;color:var(--hint);margin-bottom:6px;font-weight:500}
+.form-input{
+  width:100%;height:44px;border:1px solid var(--border);border-radius:10px;
+  padding:0 14px;font-size:14px;color:var(--title);outline:none;background:#F7F8FA;
+  transition:border-color .2s;caret-color:var(--primary)
+}
+.form-input:focus{border-color:var(--primary);background:#fff}
+.type-selector{display:flex;gap:10px}
+.type-option{
+  flex:1;height:48px;border:2px solid var(--border);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  font-size:14px;font-weight:500;color:var(--body);cursor:pointer;
+  transition:all .2s;background:#F7F8FA
+}
+.type-option.selected{border-color:var(--primary);background:var(--primary-light);color:var(--primary)}
+.type-option .type-dot{width:8px;height:8px;border-radius:50%}
+.type-option .type-dot.alipay{background:#1677FF}
+.type-option .type-dot.wechat{background:#07C160}
+.form-submit{
+  width:100%;height:46px;border-radius:23px;border:none;
+  background:linear-gradient(135deg,#FF9A3C,var(--primary));color:#fff;
+  font-size:16px;font-weight:600;box-shadow:0 4px 16px rgba(255,125,0,.30);
+  cursor:pointer;transition:all .25s ease;margin-top:4px
+}
+.form-submit:active{transform:scale(.96)}
+.form-submit.disabled{background:#C9CDD4;box-shadow:none;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ═══ 顶部导航 ═══ -->
+  <div class="nav-bar">
+    <span class="nav-back" @click="goBack">←</span>
+    <span class="nav-title">收款设置</span>
+  </div>
+
+  <!-- ═══ 账户列表 ═══ -->
+  <div class="account-card" v-for="acct in accounts" :key="acct.id">
+    <div class="acct-top">
+      <div class="acct-type-row">
+        <div class="acct-type-icon" :class="acct.type">
+          <span v-if="acct.type==='alipay'">💙</span>
+          <span v-else>💚</span>
+        </div>
+        <span class="acct-type-name">{{ acct.type === 'alipay' ? '支付宝' : '微信' }}</span>
+      </div>
+      <span class="acct-default-tag" v-if="acct.isDefault">默认</span>
+    </div>
+    <div class="acct-info">收款人：{{ acct.realName }}</div>
+    <div class="acct-account">{{ maskAccount(acct.account) }}</div>
+    <div class="acct-bottom">
+      <div class="acct-default-btn" @click="setDefault(acct)">
+        <div class="radio" :class="{checked:acct.isDefault}"></div>
+        <span>设为默认收款账户</span>
+      </div>
+      <div class="acct-actions">
+        <span class="acct-action edit" @click="openEdit(acct)">编辑</span>
+        <span class="acct-action del" @click="confirmDel(acct)">删除</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 空状态 ═══ -->
+  <div class="empty-state" v-if="accounts.length===0">
+    <span class="empty-icon">🏦</span>
+    <div class="empty-text">暂无收款账户</div>
+    <div class="empty-hint">添加支付宝或微信账户用于提现</div>
+  </div>
+
+  <!-- ═══ 底部按钮 ═══ -->
+  <div class="bottom-bar">
+    <button class="add-btn" @click="openAdd">+ 添加收款账户</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       表单弹窗（居中卡片覆盖层）
+       ═══════════════════════════════════════════ -->
+  <van-overlay :show="showForm" @click="closeForm" z-index="1000">
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;padding:0" @click.stop="">
+      <div class="form-overlay-card">
+        <div class="form-header">
+          <span class="form-close" @click="closeForm">✕</span>
+          <span class="form-title">{{ isEdit ? '编辑账户' : '添加收款账户' }}</span>
+        </div>
+        <div class="form-body">
+          <!-- 账户类型 -->
+          <div class="form-group">
+            <div class="form-label">账户类型</div>
+            <div class="type-selector">
+              <div class="type-option" :class="{selected:form.type==='alipay'}" @click="form.type='alipay'">
+                <span class="type-dot alipay"></span>支付宝
+              </div>
+              <div class="type-option" :class="{selected:form.type==='wechat'}" @click="form.type='wechat'">
+                <span class="type-dot wechat"></span>微信
+              </div>
+            </div>
+          </div>
+          <!-- 真实姓名 -->
+          <div class="form-group">
+            <div class="form-label">收款人姓名</div>
+            <input class="form-input" v-model="form.realName" placeholder="请输入实名认证姓名" maxlength="20" />
+          </div>
+          <!-- 账号 -->
+          <div class="form-group">
+            <div class="form-label">{{ form.type === 'alipay' ? '支付宝账号' : '微信绑定手机号' }}</div>
+            <input class="form-input" v-model="form.account" :placeholder="form.type==='alipay'?'手机号或邮箱':'11位手机号'" maxlength="50" />
+          </div>
+        </div>
+        <div style="padding:0 16px 16px;flex-shrink:0">
+          <button class="form-submit" :class="{disabled:!canSave}" @click="saveAccount">
+            {{ isEdit ? '保存修改' : '保存账户' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </van-overlay>
+</div>
+
+<script>
+var app = Vue.createApp({
+  setup: function() {
+    requireAuth();
+    var goPage = window.goPage;
+    var request = window.request;
+
+    /* ── 类型映射 ── */
+    function toBackendType(t) { return t === 'wechat' ? 1 : 2; }
+    function toFrontendType(at) { return at === 1 ? 'wechat' : 'alipay'; }
+
+    /* ── 状态 ── */
+    var showForm = Vue.ref(false);
+    var isEdit = Vue.ref(false);
+    var editId = Vue.ref(null);
+    var accounts = Vue.reactive([]);
+
+    var form = Vue.reactive({
+      type: 'alipay',
+      realName: '',
+      account: ''
+    });
+
+    /* ── 从后端加载 ── */
+    async function loadAccounts() {
+      try {
+        var res = await request('/api/v1/user/payment-accounts');
+        var list = (res && res.items) ? res.items : [];
+        accounts.splice(0, accounts.length);
+        list.forEach(function(a) {
+          accounts.push({
+            id: a.id,
+            type: toFrontendType(a.accountType),
+            realName: a.realName,
+            account: a.account,
+            isDefault: a.isDefault
+          });
+        });
+      } catch(e) {
+        accounts.splice(0, accounts.length);
+      }
+    }
+
+    /* ── localStorage → 后端一次性迁移 ── */
+    async function migrateLocalData() {
+      var STORAGE_KEY = 'halfcart_pay_accounts';
+      var MIGRATED_KEY = 'halfcart_migrated';
+      try {
+        if (localStorage.getItem(MIGRATED_KEY) === '1') return;  // 已迁移, 跳过API调用
+        var raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) { localStorage.setItem(MIGRATED_KEY, '1'); return; }
+        var oldList = JSON.parse(raw);
+        if (!oldList || oldList.length === 0) return;
+        // 只迁移后端还没的账户
+        var existing = await request('/api/v1/user/payment-accounts');
+        var existingCount = (existing && existing.total) ? existing.total : 0;
+        if (existingCount > 0) { localStorage.removeItem(STORAGE_KEY); localStorage.setItem(MIGRATED_KEY, '1'); return; }
+        // 逐个上传
+        for (var i = 0; i < oldList.length; i++) {
+          var a = oldList[i];
+          await request('/api/v1/user/payment-accounts', {
+            method: 'POST',
+            body: { account_type: toBackendType(a.type), real_name: a.realName, account: a.account }
+          }).catch(function() {});
+        }
+        localStorage.removeItem(STORAGE_KEY); localStorage.setItem(MIGRATED_KEY, '1');
+        vant.showToast('历史收款账户已迁移至云端');
+      } catch(e) { /* 静默迁移失败, 不影响使用 */ }
+    }
+
+    Vue.onMounted(async function() {
+      await migrateLocalData();
+      await loadAccounts();
+    });
+
+    /* ── 脱敏 ── */
+    var maskAccount = function(acct) {
+      if (!acct || acct.length <= 7) return acct || '';
+      return acct.slice(0, 3) + '****' + acct.slice(-4);
+    };
+
+    /* ── 校验 ── */
+    var canSave = Vue.computed(function() {
+      var nameOk = form.realName.trim().length > 0;
+      var acct = form.account.trim();
+      var acctOk = false;
+      if (form.type === 'alipay') {
+        acctOk = /^1[3-9]\d{9}$/.test(acct) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(acct);
+      } else {
+        acctOk = /^1[3-9]\d{9}$/.test(acct);
+      }
+      return nameOk && acctOk;
+    });
+
+    /* ── 表单 ── */
+    var openAdd = function() {
+      isEdit.value = false; editId.value = null;
+      form.type = 'alipay'; form.realName = ''; form.account = '';
+      showForm.value = true;
+    };
+
+    var openEdit = function(acct) {
+      isEdit.value = true; editId.value = acct.id;
+      form.type = acct.type; form.realName = acct.realName; form.account = acct.account;
+      showForm.value = true;
+    };
+
+    var closeForm = function() {
+      showForm.value = false;
+    };
+
+    var saveAccount = async function() {
+      if (!canSave.value) {
+        if (!form.realName.trim()) { vant.showToast('请输入收款人姓名'); return; }
+        vant.showToast('请输入正确的账号'); return;
+      }
+      try {
+        if (isEdit.value) {
+          await request('/api/v1/user/payment-accounts/' + editId.value, {
+            method: 'PUT',
+            body: { account_type: toBackendType(form.type), real_name: form.realName.trim(), account: form.account.trim() }
+          });
+        } else {
+          await request('/api/v1/user/payment-accounts', {
+            method: 'POST',
+            body: { account_type: toBackendType(form.type), real_name: form.realName.trim(), account: form.account.trim() }
+          });
+        }
+        showForm.value = false;
+        vant.showSuccessToast(isEdit.value ? '账户已更新' : '账户已添加');
+        await loadAccounts();
+      } catch(e) { /* 错误提示已在 request() 中处理 */ }
+    };
+
+    /* ── 删除 ── */
+    var confirmDel = function(acct) {
+      vant.showConfirmDialog({
+        title: '删除收款账户',
+        message: '确定要删除这个收款账户吗？',
+        confirmButtonText: '删除',
+        confirmButtonColor: '#FF4D4F'
+      }).then(async function() {
+        try {
+          await request('/api/v1/user/payment-accounts/' + acct.id, { method: 'DELETE' });
+          vant.showSuccessToast('已删除');
+          await loadAccounts();
+        } catch(e) { /* 错误提示已在 request() 中处理 */ }
+      }).catch(function() {});
+    };
+
+    /* ── 设为默认 ── */
+    var setDefault = async function(acct) {
+      if (acct.isDefault) return;
+      try {
+        await request('/api/v1/user/payment-accounts/' + acct.id + '/default', { method: 'PUT' });
+        await loadAccounts();
+      } catch(e) { /* 错误提示已在 request() 中处理 */ }
+    };
+
+    var goBack = function() { history.back(); };
+
+    return {
+      accounts, showForm, isEdit, form, canSave,
+      openAdd, openEdit, closeForm, saveAccount, confirmDel, setDefault,
+      maskAccount, goBack
+    };
+  }
+});
+app.use(vant).mount('#app');
+</script>
+</body>
+</html>

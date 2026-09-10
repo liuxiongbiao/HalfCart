@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 支付结果</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" /> 
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   HalfCart H5 全局设计规范 V1.0
+   主色:#FF7D00 | 成功:#52C41A | 错误:#FF4D4F
+   ═══════════════════════════════════════════ */
+:root {
+  --primary: #FF7D00; --primary-light: rgba(255,125,0,.10);
+  --success: #52C41A; --success-light: rgba(82,196,26,.08);
+  --danger: #FF4D4F; --danger-light: rgba(255,77,79,.08);
+  --bg: #F5F7FA; --card-bg: rgba(255,255,255,.85);
+  --title: #1D2129; --body: #4E5969; --hint: #86909C;
+  --shadow: 0 2px 12px rgba(0,0,0,.06);
+  --radius: 12px; --radius-btn: 24px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background: var(--bg); color: var(--body); -webkit-font-smoothing:antialiased;
+  display:flex; justify-content:center; min-height:100vh;
+}
+#app {
+  width:100%; max-width:480px; min-height:100vh; background:var(--bg);
+  position:relative; overflow-x:hidden;
+  padding-top:56px; padding-bottom:calc(100px + var(--safe-bottom));
+}
+
+/* ── 顶部导航 ── */
+.nav-bar {
+  position:fixed; top:0; z-index:100; width:100%; max-width:480px; left:50%; transform:translateX(-50%);
+  display:flex; align-items:center; height:56px; padding:0 16px; gap:12px;
+  background:rgba(255,255,255,.88); backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px); border-bottom:1px solid rgba(0,0,0,.04);
+}
+.nav-close { font-size:22px; color:var(--title); flex-shrink:0; cursor:pointer; }
+.nav-title { flex:1; text-align:center; font-size:17px; font-weight:600; color:var(--title); }
+
+/* ── 状态切换 (开发调试) ── */
+.demo-bar {
+  margin:12px 16px 0; padding:10px 16px; border-radius:var(--radius);
+  background:rgba(255,125,0,.06); display:flex; align-items:center; justify-content:space-between;
+  font-size:12px; color:var(--hint);
+}
+.demo-bar span { font-weight:500; color:var(--primary); }
+
+/* ── 通用卡片 ── */
+.card {
+  margin:12px 16px 0; padding:16px;
+  background:var(--card-bg); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius); box-shadow:var(--shadow); border:1px solid rgba(255,255,255,.6);
+}
+
+/* ── 状态展示区 ── */
+.status-area { text-align:center; padding:28px 20px 16px; }
+.status-icon-wrap {
+  width:72px; height:72px; border-radius:50%; margin:0 auto 16px;
+  display:flex; align-items:center; justify-content:center;
+  animation: iconPop .45s cubic-bezier(.34,1.56,.64,1) both;
+}
+.status-icon-wrap.success { background:var(--success-light); }
+.status-icon-wrap.fail { background:var(--danger-light); }
+/* 对勾 SVG */
+.icon-check { width:36px; height:36px; }
+.icon-check .circle { fill:none; stroke:var(--success); stroke-width:3; }
+.icon-check .check { fill:none; stroke:var(--success); stroke-width:3; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:22; stroke-dashoffset:22; animation:drawCheck .35s .15s ease forwards; }
+@keyframes drawCheck { to { stroke-dashoffset:0; } }
+/* 感叹号 */
+.icon-exclaim { font-size:36px; color:var(--danger); line-height:1; font-weight:700; }
+
+.status-title { font-size:20px; font-weight:600; color:var(--title); margin-bottom:6px; }
+.status-desc { font-size:14px; color:var(--hint); }
+
+@keyframes iconPop { 0% { transform:scale(0); opacity:0; } 100% { transform:scale(1); opacity:1; } }
+
+/* ── 金额信息卡片 ── */
+.amount-center { text-align:center; padding:8px 0; }
+.amount-label-card { font-size:12px; color:var(--hint); margin-bottom:4px; }
+.amount-value-card { font-size:28px; font-weight:700; color:var(--primary); margin-bottom:12px; }
+.card-divider { height:1px; background:rgba(0,0,0,.05); margin:0 0 12px; }
+.info-row { display:flex; justify-content:space-between; padding:5px 0; font-size:13px; }
+.info-label { color:var(--hint); }
+.info-value { color:var(--body); }
+.fail-reason { font-size:13px; color:var(--danger); padding-top:4px; }
+
+/* ── 温馨提示 ── */
+.tip-title { font-size:14px; font-weight:600; color:var(--title); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.tip-text { font-size:13px; color:var(--hint); line-height:1.7; }
+
+/* ── 底部操作栏 ── */
+.action-bar {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; z-index:100;
+  padding:10px 16px calc(10px + var(--safe-bottom));
+  background:rgba(255,255,255,.92); backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px); border-top:1px solid rgba(0,0,0,.04);
+  display:flex; gap:12px;
+}
+.btn {
+  flex:1; height:48px; border-radius:var(--radius-btn); font-size:15px; font-weight:600;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  transition:all .25s ease; border:none;
+}
+.btn:active { transform:scale(.96); }
+.btn-primary { background:linear-gradient(135deg,#FF9A3C,var(--primary)); color:#fff; box-shadow:0 4px 16px rgba(255,125,0,.28); }
+.btn-outline { background:#fff; color:var(--primary); border:1px solid var(--primary); }
+.btn-ghost { background:#F7F8FA; color:var(--body); }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ═══ 顶部导航 ═══ -->
+  <div class="nav-bar">
+    <span class="nav-close" @click="goHome">✕</span>
+    <span class="nav-title">支付结果</span>
+  </div>
+
+  <!-- ═══ 状态展示区 ═══ -->
+  <div class="status-area">
+    <!-- 成功图标 -->
+    <div class="status-icon-wrap success" v-if="isSuccess">
+      <svg class="icon-check" viewBox="0 0 40 40">
+        <circle class="circle" cx="20" cy="20" r="18"/>
+        <polyline class="check" points="11,20 18,27 29,13"/>
+      </svg>
+    </div>
+    <!-- 失败图标 -->
+    <div class="status-icon-wrap fail" v-else>
+      <span class="icon-exclaim">!</span>
+    </div>
+    <div class="status-title">{{ isSuccess ? '支付成功' : '支付失败' }}</div>
+    <div class="status-desc">{{ isSuccess ? '订单已支付成功，等待拼友成团' : '支付未完成，请检查后重新支付' }}</div>
+  </div>
+
+  <!-- ═══ 金额与订单信息 ═══ -->
+  <div class="card">
+    <div class="amount-center">
+      <div class="amount-label-card">实付金额</div>
+      <div class="amount-value-card">¥{{ result.amount }}</div>
+    </div>
+    <div class="card-divider"></div>
+    <div class="info-row"><span class="info-label">订单编号</span><span class="info-value">{{ result.orderNo }}</span></div>
+    <div class="info-row"><span class="info-label">支付时间</span><span class="info-value">{{ result.payTime }}</span></div>
+    <div class="fail-reason" v-if="!isSuccess">失败原因：{{ result.failReason }}</div>
+  </div>
+
+  <!-- ═══ 温馨提示 ═══ -->
+  <div class="card">
+    <div class="tip-title">💡 温馨提示</div>
+    <div class="tip-text" v-if="isSuccess">成团后将第一时间通知团长采购，请保持电话畅通。团长采购完成后，您将收到核销码，凭码线下取货即可。</div>
+    <div class="tip-text" v-else>若已扣款，请不要重复支付，资金会在 1-3 个工作日内原路退回到您的支付账户。如有疑问，请联系客服处理。</div>
+  </div>
+
+  <!-- ═══ 底部操作栏 ═══ -->
+  <div class="action-bar">
+    <button class="btn btn-ghost" @click="goHome">返回首页</button>
+    <button class="btn btn-primary" v-if="isSuccess" @click="goOrder">查看订单</button>
+    <button class="btn btn-primary" v-else @click="goRepay">重新支付</button>
+  </div>
+</div>
+
+<script>
+const { ref, reactive } = Vue;
+
+Vue.createApp({
+  setup() { requireAuth();
+    // 支付宝同步回调传入 trade_no, out_trade_no, total_amount
+    // 钱包支付跳入传入 orderId, amount
+    var tradeNo = getQueryParam('trade_no') || '';
+    var outTradeNo = getQueryParam('out_trade_no') || '';
+    var totalAmount = getQueryParam('total_amount') || '';
+    var orderId = getQueryParam('orderId') || getQueryParam('id') || '';
+    var amount = getQueryParam('amount') || totalAmount || '0.00';
+    var isSuccess = ref(!!tradeNo || !!orderId);
+
+    var result = reactive({
+      amount: amount,
+      orderNo: outTradeNo || '',
+      payTime: new Date().toISOString().replace('T',' ').slice(0,19),
+      failReason: '支付未完成，请检查后重新支付',
+    });
+
+    // 从订单信息中补全 orderNo
+    function fetchOrderInfo() {
+      if (!orderId) return;
+      request('/api/v1/orders/' + orderId).then(function(res) {
+        if (res && res.code === 0 && res.data) {
+          var ord = res.data.order || {};
+          if (!result.orderNo && ord.orderNo) {
+            result.orderNo = ord.orderNo;
+          }
+        }
+      }).catch(function() {});
+    }
+
+    // 有 out_trade_no 时查询支付宝支付状态
+    function fetchPaymentStatus() {
+      if (!outTradeNo) return;
+      request('/api/v1/pay/alipay/query/' + outTradeNo).then(function(res) {
+        if (res && res.code === 0 && res.data) {
+          isSuccess.value = res.data.tradeStatus === 1;
+          result.amount = res.data.amount || result.amount;
+          result.orderNo = res.data.outTradeNo || result.orderNo;
+        }
+      }).catch(function() {});
+    }
+    Vue.onMounted(function() {
+      fetchOrderInfo();
+      fetchPaymentStatus();
+    });
+
+    var goHome = function() { goPage('index.html'); };
+    var goOrder = function() { goPage('order-detail.html', { id: orderId }); };
+    var goRepay = function() { goPage('pay-confirm.html', { id: orderId }); };
+
+    return { isSuccess, result, goHome, goOrder, goRepay };
+  }
+}).use(vant).mount('#app');
+</script>
+</body>
+</html>

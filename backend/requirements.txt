@@ -1,0 +1,53 @@
+# ===========================================================
+# HalfCart Backend 生产依赖 (pip-installable)
+# ===========================================================
+# 对应 pyproject.toml [tool.poetry.dependencies]
+# 预生成用于 Docker 构建，避免 Poetry 安装耗时过长
+# ===========================================================
+
+# FastAPI 核心
+fastapi>=0.109.0,<0.120.0
+uvicorn[standard]>=0.27.0,<0.30.0
+pydantic>=2.6.0,<3.0.0
+pydantic-settings>=2.1.0,<3.0.0
+
+# 数据库 (MySQL 8.0 异步)
+sqlalchemy>=2.0.25,<2.1.0
+aiomysql>=0.2.0,<0.3.0
+alembic>=1.13.0,<2.0.0
+
+# Redis 异步
+redis[hiredis]>=5.0.0,<6.0.0
+
+# ElasticSearch 8 异步
+elasticsearch[async]>=8.11.0,<9.0.0
+
+# RabbitMQ 异步
+aio-pika>=9.4.0,<10.0.0
+
+# JWT 鉴权 + 密码哈希
+pyjwt>=2.8.0,<3.0.0
+cryptography>=41.0.0,<43.0.0
+bcrypt>=4.1.0,<5.0.0
+
+# HTTP 客户端 (Dify / 短信服务调用)
+httpx>=0.27.0,<0.28.0
+aiohttp>=3.9.0,<4.0.0
+
+# 日志
+loguru>=0.7.0,<0.8.0
+
+# 定时任务
+apscheduler>=3.10.0,<4.0.0
+
+# 短信
+alibabacloud_dypnsapi20170525>=1.0.0
+alibabacloud_credentials>=0.3.0
+alibabacloud_tea_openapi>=0.3.0
+alibabacloud_tea_util>=0.3.0
+
+# 工具
+python-multipart>=0.0.6,<1.0.0
+python-dateutil>=2.8.0,<3.0.0
+# 语音识别 Whisper (已启用)
+openai-whisper>=20231117

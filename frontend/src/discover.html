@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 发现好物</title>
+<link rel="dns-prefetch" href="https://unpkg.com" />
+<link rel="preconnect" href="https://unpkg.com" crossorigin />
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" />
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+:root { --primary:#FF7D00; --primary-gradient:linear-gradient(135deg,#FF9A3C,#FF7D00);
+  --primary-light:rgba(255,125,0,.1); --bg:#F5F7FA; --card-bg:rgba(255,255,255,.85);
+  --title:#1D2129; --body:#4E5969; --hint:#86909C; --border-light:#F2F3F5;
+  --shadow:0 2px 12px rgba(0,0,0,.06); --radius:12px; --radius-sm:8px;
+  --safe-bottom:env(safe-area-inset-bottom,0px); }
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--body);-webkit-font-smoothing:antialiased;display:flex;justify-content:center;min-height:100vh}
+#app{width:100%;max-width:480px;min-height:100vh;background:var(--bg);position:relative;overflow-x:hidden;padding-top:56px;padding-bottom:82px}
+
+/* 顶部栏 */
+.header-bar{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(255,255,255,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,0,0,.04)}
+.header-title{font-size:18px;font-weight:700;color:var(--title)}
+.header-msg{position:relative;font-size:22px;cursor:pointer}
+
+/* 搜索栏 */
+.search-bar{padding:10px 16px;display:flex;gap:8px;align-items:center}
+.search-input{flex:1;height:36px;border-radius:18px;background:var(--border-light);border:none;padding:0 36px 0 14px;font-size:13px;color:var(--title);outline:none}
+.search-input:focus{background:#fff;box-shadow:0 0 0 2px var(--primary-light)}
+.search-input::placeholder{color:var(--hint)}
+
+/* 板块 */
+.section{margin:14px 16px 0}
+.section-header{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.section-header .icon{font-size:18px}.section-header .title{font-size:15px;font-weight:600;color:var(--title)}
+.section-header .count{font-size:11px;color:var(--hint)}
+
+/* 横向滚动卡片 */
+.scroll-row{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.scroll-row::-webkit-scrollbar{display:none}
+
+/* 订单卡片 (横向滚动版) */
+.discover-card{flex-shrink:0;width:220px;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;position:relative;overflow:hidden}
+.discover-card .spot-badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:var(--primary-light);color:var(--primary);margin-bottom:6px}
+.discover-card .card-title{font-size:14px;font-weight:600;color:var(--title);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px}
+.discover-card .card-desc{font-size:11px;color:var(--hint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px}
+.discover-card .price-row{display:flex;align-items:baseline;gap:2px;margin-bottom:6px}
+.discover-card .price-sym{font-size:12px;font-weight:600;color:var(--primary)}
+.discover-card .price-val{font-size:20px;font-weight:700;color:var(--primary)}
+.discover-card .price-unit{font-size:11px;color:var(--hint)}
+.discover-card .card-footer{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--hint)}
+
+/* 最新列表卡片 (纵向排列) */
+.latest-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:10px;position:relative}
+.latest-card .latest-title{font-size:15px;font-weight:600;color:var(--title);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.latest-card .latest-loc{font-size:11px;color:var(--hint);margin-bottom:6px}
+.latest-card .latest-footer{display:flex;align-items:center;justify-content:space-between}
+.latest-card .latest-price{font-size:18px;font-weight:700;color:var(--primary)}
+
+/* 空状态 */
+.empty-row{display:flex;align-items:center;justify-content:center;padding:20px 0;color:var(--hint);font-size:13px}
+
+/* 骨架屏 */
+.skeleton-card{background:#fff;border-radius:var(--radius);padding:12px;flex-shrink:0;width:220px}
+.skeleton{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}
+.skeleton-sm{width:60%;height:14px;margin-bottom:8px}.skeleton-lg{width:100%;height:18px;margin-bottom:8px}.skeleton-price{width:40%;height:22px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* 底部 Tab 栏 — 与 index.html 保持一致 */
+.tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;align-items:center;justify-content:space-around;padding:8px 0 calc(8px + var(--safe-bottom));background:rgba(255,255,255,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid rgba(0,0,0,.04);z-index:200}
+.tab-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--hint);cursor:pointer;transition:all .2s}
+.tab-item.active{color:var(--primary)}
+.tab-item:active{transform:scale(.9)}
+.tab-icon{font-size:22px}
+.tab-publish{width:48px;height:48px;border-radius:50%;background:var(--primary-gradient);display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;box-shadow:0 4px 16px rgba(255,125,0,.35);margin-top:-20px;transition:all .2s;cursor:pointer}
+.tab-publish:active{transform:scale(.88)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header-bar">
+    <div class="header-title">发现好物</div>
+    <div class="header-msg" @click="goPage('messages.html')">💬</div>
+  </div>
+  <div class="search-bar">
+    <input class="search-input" v-model="keyword" placeholder="搜索你想拼的商品" @keyup.enter="fetchAll" />
+  </div>
+
+  <!-- 🔥 热门拼单 -->
+  <div class="section">
+    <div class="section-header"><span class="icon">🔥</span><span class="title">热门拼单</span><span class="count">{{ hot.length }}条</span></div>
+    <div class="scroll-row" v-if="!loadingHot">
+      <div class="discover-card" v-for="o in hot" :key="'h'+o.orderId" @click="goDetail(o)">
+        <span class="spot-badge" v-if="o.isSpot">现货</span>
+        <div class="card-title">{{ o.goodsName }}</div>
+        <div class="card-desc" v-if="o.meetLocation">{{ o.meetLocation }}</div>
+        <div class="price-row"><span class="price-sym">¥</span><span class="price-val">{{ o.pricePerPerson }}</span><span class="price-unit">/人</span></div>
+        <div class="card-footer"><span>👥 {{ o.currentPeople }}/{{ o.totalPeople }}人</span><span>信用{{ o.creditScore }}</span></div>
+      </div>
+      <div class="empty-row" v-if="hot.length===0">暂无热门拼单，快去发起第一单吧</div>
+    </div>
+    <div class="scroll-row" v-else>
+      <div class="skeleton-card" v-for="n in 3"><div class="skeleton skeleton-lg"></div><div class="skeleton skeleton-sm"></div><div class="skeleton skeleton-price"></div></div>
+    </div>
+  </div>
+
+  <!-- ⭐ 高信用团长 -->
+  <div class="section">
+    <div class="section-header"><span class="icon">⭐</span><span class="title">高信用团长</span><span class="count">{{ trusted.length }}条</span></div>
+    <div class="scroll-row" v-if="!loadingTrusted">
+      <div class="discover-card" v-for="o in trusted" :key="'t'+o.orderId" @click="goDetail(o)">
+        <span class="spot-badge" v-if="o.isSpot">现货</span>
+        <div class="card-title">{{ o.goodsName }}</div>
+        <div class="card-desc" v-if="o.meetLocation">{{ o.meetLocation }}</div>
+        <div class="price-row"><span class="price-sym">¥</span><span class="price-val">{{ o.pricePerPerson }}</span><span class="price-unit">/人</span></div>
+        <div class="card-footer"><span>👤 团长</span><span>信用{{ o.creditScore }}</span></div>
+      </div>
+      <div class="empty-row" v-if="trusted.length===0">暂无高信用团长发单</div>
+    </div>
+    <div class="scroll-row" v-else>
+      <div class="skeleton-card" v-for="n in 3"><div class="skeleton skeleton-lg"></div><div class="skeleton skeleton-sm"></div><div class="skeleton skeleton-price"></div></div>
+    </div>
+  </div>
+
+  <!-- 🆕 最新发布 -->
+  <div class="section">
+    <div class="section-header"><span class="icon">🆕</span><span class="title">最新发布</span><span class="count">{{ latest.length }}条</span></div>
+    <div v-if="!loadingLatest">
+      <div class="latest-card" v-for="o in latest" :key="'l'+o.orderId" @click="goDetail(o)">
+        <div class="latest-title">{{ o.goodsName }}</div>
+        <div class="latest-loc" v-if="o.meetLocation">📍 {{ o.meetLocation }}</div>
+        <div class="latest-footer">
+          <div class="latest-price">¥{{ o.pricePerPerson }}<span style="font-size:12px;font-weight:400;color:var(--hint)">/人</span></div>
+          <span style="font-size:11px;color:var(--hint)">👥 {{ o.currentPeople }}/{{ o.totalPeople }}</span>
+        </div>
+      </div>
+      <div class="empty-row" v-if="latest.length===0">暂无最新拼单</div>
+    </div>
+    <div v-else>
+      <div class="latest-card" v-for="n in 3"><div class="skeleton skeleton-lg" style="width:70%"></div><div class="skeleton skeleton-sm"></div><div class="skeleton skeleton-price"></div></div>
+    </div>
+  </div>
+
+  <!-- 底部 Tab 栏 -->
+  <div class="tab-bar">
+    <div class="tab-item" @click="goPage('index.html')"><span class="tab-icon">🏠</span><span>首页</span></div>
+    <div class="tab-item active"><span class="tab-icon">🔍</span><span>发现</span></div>
+    <div class="tab-publish" @click="goPage('publish.html')">+</div>
+    <div class="tab-item" @click="goPage('messages.html')"><span class="tab-icon">💬</span><span>消息</span></div>
+    <div class="tab-item" @click="goPage('profile.html')"><span class="tab-icon">👤</span><span>我的</span></div>
+  </div>
+</div>
+<script>
+var app = Vue.createApp({
+  setup: function () {
+    var goPage = window.goPage;
+    var keyword = Vue.ref('');
+    var hot = Vue.ref([]), trusted = Vue.ref([]), latest = Vue.ref([]);
+    var loadingHot = Vue.ref(true), loadingTrusted = Vue.ref(true), loadingLatest = Vue.ref(true);
+
+    function fetchAll() {
+      loadingHot.value = true; loadingTrusted.value = true; loadingLatest.value = true;
+      var params = {};
+      if (keyword.value.trim()) params.keyword = keyword.value.trim();
+      var qs = Object.keys(params).map(function(k){return k+'='+encodeURIComponent(params[k])}).join('&');
+      request('/api/v1/orders/discover' + (qs ? '?'+qs : ''))
+        .then(function (res) {
+          if (res && res.code === 0 && res.data) {
+            hot.value = res.data.hot || [];
+            trusted.value = res.data.trusted || [];
+            latest.value = res.data.latest || [];
+          }
+        }).catch(function () {}).finally(function () {
+          loadingHot.value = false; loadingTrusted.value = false; loadingLatest.value = false;
+        });
+    }
+
+    function goDetail(o) { goPage('order-detail.html', { id: o.orderId }); }
+
+    Vue.onMounted(function () { fetchAll(); });
+    return { goPage, keyword, hot, trusted, latest, loadingHot, loadingTrusted, loadingLatest, fetchAll, goDetail };
+  }
+});
+app.use(vant); app.mount('#app');
+</script>
+</body>
+</html>

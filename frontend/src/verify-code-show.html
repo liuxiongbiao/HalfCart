@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 核销码</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" /> 
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   HalfCart H5 全局设计规范 V1.0
+   主色:#FF7D00 | 背景:#F5F7FA | 圆角12px
+   ═══════════════════════════════════════════ */
+:root {
+  --primary: #FF7D00; --primary-light: rgba(255,125,0,.10);
+  --bg: #F5F7FA; --card-bg: rgba(255,255,255,.85);
+  --title: #1D2129; --body: #4E5969; --hint: #86909C;
+  --shadow: 0 2px 12px rgba(0,0,0,.06);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,.10);
+  --radius: 12px; --radius-btn: 24px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background: var(--bg); color: var(--body); -webkit-font-smoothing:antialiased;
+  display:flex; justify-content:center; min-height:100vh;
+}
+#app {
+  width:100%; max-width:480px; min-height:100vh; background:var(--bg);
+  position:relative; overflow-x:hidden;
+  padding-top:56px; padding-bottom:calc(90px + var(--safe-bottom));
+}
+
+/* ── 顶部导航 ── */
+.nav-bar {
+  position:fixed; top:0; z-index:100; width:100%; max-width:480px; left:50%; transform:translateX(-50%);
+  display:flex; align-items:center; height:56px; padding:0 16px; gap:12px;
+  background:rgba(255,255,255,.88); backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px); border-bottom:1px solid rgba(0,0,0,.04);
+}
+.nav-back { font-size:22px; color:var(--title); flex-shrink:0; cursor:pointer; }
+.nav-title { flex:1; text-align:center; font-size:17px; font-weight:600; color:var(--title); }
+.nav-more { font-size:20px; color:var(--title); flex-shrink:0; cursor:pointer; }
+
+/* ── 通用卡片 ── */
+.card {
+  margin:12px 16px 0; padding:16px;
+  background:var(--card-bg); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius); box-shadow:var(--shadow); border:1px solid rgba(255,255,255,.6);
+}
+
+/* ── 核销码核心卡片 ── */
+.code-card {
+  margin:20px 16px 0; padding:24px 16px 20px; text-align:center;
+  background:var(--card-bg); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius); box-shadow:var(--shadow-lg);
+  border:1.5px solid rgba(255,125,0,.12); position:relative; overflow:hidden;
+}
+/* 顶部装饰条 */
+.code-card::before {
+  content:''; position:absolute; top:0; left:50%; transform:translateX(-50%);
+  width:40px; height:3px; border-radius:0 0 3px 3px; background:var(--primary);
+}
+.code-label { font-size:13px; color:var(--hint); margin-bottom:16px; display:flex; align-items:center; justify-content:center; gap:6px; }
+.code-digits {
+  display:flex; justify-content:center; gap:10px; margin-bottom:14px;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.digit-box {
+  width:48px; height:64px; border-radius:10px;
+  background:linear-gradient(180deg, rgba(255,125,0,.06) 0%, rgba(255,125,0,.02) 100%);
+  border:2px solid rgba(255,125,0,.15); display:flex; align-items:center; justify-content:center;
+  font-size:34px; font-weight:700; color:var(--primary); font-family:"SF Mono","Menlo","Consolas",monospace;
+  transition:all .25s ease; position:relative;
+}
+.digit-box::after {
+  content:''; position:absolute; left:0; right:0; top:50%; height:1px;
+  background:rgba(255,125,0,.06); pointer-events:none;
+}
+.code-footer { font-size:12px; color:var(--hint); display:flex; align-items:center; justify-content:center; gap:6px; }
+.code-footer .dot { width:4px; height:4px; border-radius:50%; background:var(--hint); }
+.no-screenshot { margin-top:12px; font-size:11px; color:var(--hint); opacity:.7; }
+
+/* ── 全屏放大层 ── */
+.overlay-full {
+  position:fixed; inset:0; z-index:999; background:rgba(0,0,0,.88);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+}
+.overlay-digits { display:flex; gap:16px; margin-bottom:20px; }
+.overlay-digit {
+  width:72px; height:96px; border-radius:14px;
+  background:rgba(255,125,0,.12); border:2px solid rgba(255,125,0,.25);
+  display:flex; align-items:center; justify-content:center;
+  font-size:52px; font-weight:700; color:var(--primary); font-family:"SF Mono","Menlo",monospace;
+}
+.overlay-hint { color:rgba(255,255,255,.45); font-size:13px; }
+
+/* ── 交接信息卡片 ── */
+.info-row { display:flex; padding:7px 0; font-size:14px; }
+.info-label { color:var(--hint); width:80px; flex-shrink:0; }
+.info-value { color:var(--title); flex:1; }
+.info-value.place { color:var(--primary); font-weight:500; }
+
+/* ── 注意事项 ── */
+.tip-title { font-size:14px; font-weight:600; color:var(--title); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+.tip-item { display:flex; gap:8px; font-size:13px; color:var(--hint); line-height:1.7; padding:4px 0; }
+.tip-num { flex-shrink:0; width:18px; height:18px; border-radius:50%; background:var(--primary-light); color:var(--primary); font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center; margin-top:2px; }
+
+/* ── 底部操作栏 ── */
+.action-bar {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; z-index:100;
+  padding:10px 16px calc(10px + var(--safe-bottom));
+  background:rgba(255,255,255,.92); backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px); border-top:1px solid rgba(0,0,0,.04);
+  display:flex; gap:10px;
+}
+.btn {
+  flex:1; height:48px; border-radius:var(--radius-btn); font-size:15px; font-weight:600;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  transition:all .25s ease; border:none;
+}
+.btn:active { transform:scale(.96); }
+.btn-outline { background:#fff; color:var(--primary); border:1.5px solid var(--primary); }
+.btn-ghost { background:#F7F8FA; color:var(--body); }
+
+/* ── 动画 ── */
+.fade-enter-active { transition:opacity .25s ease; }
+.fade-leave-active { transition:opacity .15s ease; }
+.fade-enter-from, .fade-leave-to { opacity:0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ═══ 顶部导航 ═══ -->
+  <div class="nav-bar">
+    <span class="nav-back" @click="goBack">←</span>
+    <span class="nav-title">核销码</span>
+    <span class="nav-more">⋯</span>
+  </div>
+
+  <!-- ═══ 核销码核心卡片 ═══ -->
+  <div class="code-card">
+    <div class="code-label">🔑 请向团长出示此核销码</div>
+    <div class="code-digits" @click="toggleFullscreen">
+      <div class="digit-box" v-for="(d,i) in codeDigits" :key="i">{{ d }}</div>
+    </div>
+    <div class="code-footer">
+      <span>⏱ {{ order.deadlineHint }}</span>
+      <span class="dot"></span>
+      <span>核销后不可撤回</span>
+    </div>
+    <div class="no-screenshot">⚠ 截图无效，请当面出示本页面</div>
+  </div>
+
+  <!-- ═══ 全屏核销码 ═══ -->
+  <transition name="fade">
+  <div class="overlay-full" v-if="fullscreen" @click="fullscreen=false">
+    <div class="overlay-digits">
+      <div class="overlay-digit" v-for="(d,i) in codeDigits" :key="i">{{ d }}</div>
+    </div>
+    <div class="overlay-hint">点击任意处关闭 · 向团长出示此码完成核销</div>
+  </div>
+  </transition>
+
+  <!-- ═══ 订单交接信息 ═══ -->
+  <div class="card">
+    <div class="info-row"><span class="info-label">商品名称</span><span class="info-value">{{ order.goodsName }}</span></div>
+    <div class="info-row"><span class="info-label">交接地点</span><span class="info-value place">{{ order.location }}</span></div>
+    <div class="info-row"><span class="info-label">截单时间</span><span class="info-value">{{ order.deadlineHint }}</span></div>
+    <div class="info-row"><span class="info-label">团长</span><span class="info-value">{{ order.creatorName }} · 信用{{ order.creatorCredit }}</span></div>
+  </div>
+
+  <!-- ═══ 注意事项 ═══ -->
+  <div class="card">
+    <div class="tip-title">📋 注意事项</div>
+    <div class="tip-item"><span class="tip-num">1</span><span>请当面确认商品完好无误后，再向团长出示核销码</span></div>
+    <div class="tip-item"><span class="tip-num">2</span><span>核销完成后订单自动结算，资金转入团长账户</span></div>
+    <div class="tip-item"><span class="tip-num">3</span><span>如有商品问题或时间冲突，请优先联系团长沟通协商</span></div>
+  </div>
+
+  <!-- ═══ 底部操作栏 ═══ -->
+  <div class="action-bar">
+    <button class="btn btn-ghost" @click="goOrder">查看订单</button>
+    <button class="btn btn-outline" @click="contactCreator">📞 联系团长</button>
+  </div>
+</div>
+
+<script>
+const { ref, reactive, computed } = Vue;
+
+Vue.createApp({
+  setup() { requireAuth();
+    var orderId = getQueryParam('id') || '1';
+    var fullscreen = ref(false), code = ref('');
+    var codeDigits = computed(function () { return code.value.split(''); });
+    var order = reactive({ goodsName:'加载中...', location:'', deadlineHint:'', creatorName:'', creatorCredit:'' });
+
+    function fetchOrder() {
+      request('/api/v1/orders/' + orderId).then(function (res) {
+        if (res && res.code === 0 && res.data) {
+          var d = res.data;
+          order.goodsName = d.goodsName || ''; order.location = d.meetLocation || '';
+          order.deadlineHint = d.deadline || ''; order.creatorName = d.creatorNickname || '';
+          order.creatorCredit = (d.creatorCreditScore || 100) + '';
+          code.value = d.verificationCode || '';
+        }
+      }).catch(function () {});
+    }
+    Vue.onMounted(function () { fetchOrder(); });
+
+    var goBack = function () { history.back(); };
+    var toggleFullscreen = function () { fullscreen.value = !fullscreen.value; };
+    var goOrder = function () { goPage('order-detail.html', { id: orderId }); };
+    var contactCreator = function () { goPage('chat-detail.html', { id: orderId }); };
+
+    return { fullscreen, code, codeDigits, order, goBack, toggleFullscreen, goOrder, contactCreator };
+  }
+}).use(vant).mount('#app');
+</script>
+</body>
+</html>

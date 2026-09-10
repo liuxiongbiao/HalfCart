@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 我的订单</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" />
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<style>
+:root {
+  --primary:#FF7D00; --primary-light:rgba(255,125,0,.10);
+  --success:#52C41A; --danger:#FF4D4F;
+  --bg:#F5F7FA; --card-bg:rgba(255,255,255,.85);
+  --title:#1D2129; --body:#4E5969; --hint:#86909C;
+  --shadow:0 2px 12px rgba(0,0,0,.06);
+  --radius:12px;
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--body);-webkit-font-smoothing:antialiased;
+  display:flex;justify-content:center;min-height:100vh
+}
+#app{
+  width:100%;max-width:480px;min-height:100vh;background:var(--bg);
+  position:relative;overflow-x:hidden;padding-top:108px;padding-bottom:24px
+}
+.nav-bar{
+  position:fixed;top:0;z-index:100;width:100%;max-width:480px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;height:56px;padding:0 16px;gap:12px;
+  background:rgba(255,255,255,.88);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,0,0,.04)
+}
+.nav-back{font-size:22px;color:var(--title);flex-shrink:0;cursor:pointer}
+.nav-title{flex:1;text-align:center;font-size:17px;font-weight:600;color:var(--title)}
+.role-tabs{
+  position:fixed;top:56px;z-index:99;width:100%;max-width:480px;left:50%;transform:translateX(-50%);
+  display:flex;background:rgba(255,255,255,.88);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);padding:6px 16px 0;gap:0
+}
+.role-tab{
+  flex:1;text-align:center;padding:10px 0;font-size:14px;font-weight:500;cursor:pointer;
+  color:var(--hint);border-bottom:2px solid transparent;transition:all .25s ease
+}
+.role-tab.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+.status-bar{
+  display:flex;gap:6px;padding:8px 16px;overflow-x:auto;scrollbar-width:none;margin-top:52px;
+  position:fixed;top:56px;z-index:98;width:100%;max-width:480px;left:50%;transform:translateX(-50%);
+  background:linear-gradient(180deg,rgba(255,255,255,.88) 60%,transparent);
+  pointer-events:none
+}
+.status-bar>*{pointer-events:auto}
+.status-bar::-webkit-scrollbar{display:none}
+.status-tag{
+  flex-shrink:0;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:500;
+  white-space:nowrap;cursor:pointer;transition:all .25s ease;
+  background:#F2F3F5;color:var(--body)
+}
+.status-tag.active{background:var(--primary);color:#fff}
+.order-list{padding:12px 16px 0;display:flex;flex-direction:column;gap:12px}
+.order-card{
+  background:var(--card-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.6);
+  padding:14px;cursor:pointer;transition:all .25s ease
+}
+.order-card:active{transform:scale(.98)}
+.card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.card-tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px}
+.card-tag.gathering{background:var(--primary-light);color:var(--primary)}
+.card-tag.spot{background:rgba(255,125,0,.12);color:var(--primary)}
+.card-tag.delivering{background:rgba(82,196,26,.10);color:var(--success)}
+.card-tag.finished{background:#F2F3F5;color:var(--hint)}
+.card-tag.canceled{background:rgba(255,77,79,.06);color:var(--danger)}
+.card-status{font-size:13px;font-weight:500}
+.card-status.gathering{color:var(--primary)}
+.card-status.delivering{color:var(--success)}
+.card-status.finished{color:var(--hint)}
+.card-status.canceled{color:var(--danger)}
+.card-body{display:flex;gap:10px;margin-bottom:10px}
+.card-thumb{
+  width:72px;height:72px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:30px
+}
+.card-thumb.food{background:linear-gradient(135deg,rgba(255,125,0,.08),rgba(255,157,48,.12))}
+.card-thumb.fresh{background:linear-gradient(135deg,rgba(82,196,26,.08),rgba(82,196,26,.04))}
+.card-thumb.snack{background:linear-gradient(135deg,rgba(250,112,154,.08),rgba(254,224,64,.08))}
+.card-thumb.daily{background:linear-gradient(135deg,rgba(22,119,255,.06),rgba(0,242,254,.06))}
+.card-info{flex:1;min-width:0}
+.card-name{font-size:15px;font-weight:600;color:var(--title);line-height:1.4;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px}
+.card-spec{font-size:12px;color:var(--hint)}
+.card-bottom{display:flex;align-items:center;justify-content:space-between}
+.card-count{font-size:12px;color:var(--hint)}
+.card-price{font-size:16px;font-weight:600;color:var(--primary)}
+.card-actions{display:flex;gap:8px}
+.btn-sm{
+  padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;
+  transition:all .25s ease;border:none;white-space:nowrap
+}
+.btn-sm:active{transform:scale(.94)}
+.btn-sm.primary{background:var(--primary);color:#fff}
+.btn-sm.outline{background:#fff;color:var(--primary);border:1px solid var(--primary)}
+.btn-sm.ghost{background:#F7F8FA;color:var(--body)}
+.btn-sm.danger-ghost{background:rgba(255,77,79,.06);color:var(--danger);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;transition:all .25s ease;border:none;white-space:nowrap}
+.btn-sm.danger-ghost:active{transform:scale(.94);background:rgba(255,77,79,.12)}
+.empty-state{text-align:center;padding:48px 20px;color:var(--hint)}
+.empty-icon{font-size:48px;margin-bottom:12px;display:block}
+.empty-btn{display:inline-block;margin-top:16px;padding:10px 32px;border-radius:20px;
+  background:var(--primary);color:#fff;font-size:14px;font-weight:500;cursor:pointer}
+.fade-enter-active{transition:all .25s ease}.fade-leave-active{transition:all .15s ease}
+.fade-enter-from,.fade-leave-to{opacity:0;transform:translateY(4px)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="nav-bar">
+    <span class="nav-back" @click="goBack">←</span>
+    <span class="nav-title">我的订单</span>
+  </div>
+
+  <div class="role-tabs">
+    <div class="role-tab" :class="{active:role==='joined'}" @click="switchRole('joined')">我参与的</div>
+    <div class="role-tab" :class="{active:role==='created'}" @click="switchRole('created')">我发起的</div>
+  </div>
+
+  <div class="status-bar">
+    <span class="status-tag" v-for="s in statusFilters" :key="s.key"
+      :class="{active:activeStatus===s.key}" @click="switchTab(s.key)">{{ s.label }}</span>
+  </div>
+
+  <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
+    <transition-group name="fade" tag="div" class="order-list">
+      <div class="order-card" v-for="o in filteredOrders" :key="o.id" @click="goDetail(o)">
+        <div class="card-top">
+          <span class="card-tag" :class="o.tagClass">{{ o.tagLabel }}</span>
+          <span class="card-status" :class="o.statusClass">{{ o.statusLabel }}</span>
+        </div>
+        <div class="card-body">
+          <div class="card-thumb" :class="o.thumbClass">{{ o.thumb }}</div>
+          <div class="card-info">
+            <div class="card-name">{{ o.goodsName }}</div>
+            <div class="card-spec">{{ o.spec }}</div>
+          </div>
+        </div>
+        <div class="card-bottom">
+          <span class="card-count">共{{ o.count }}件</span>
+          <span class="card-price">¥{{ o.price }}</span>
+          <div class="card-actions" @click.stop>
+            <button class="btn-sm primary" v-if="o.btnPrimary" @click="onAction(o,o.btnPrimaryAction)">{{ o.btnPrimary }}</button>
+            <button class="btn-sm outline" v-if="o.btnOutline" @click="onAction(o,o.btnOutlineAction)">{{ o.btnOutline }}</button>
+            <button class="btn-sm ghost" v-if="o.btnGhost" @click="onAction(o,o.btnGhostAction)">{{ o.btnGhost }}</button>
+            <button class="btn-sm danger-ghost" v-if="o.canDelete" @click="onDelete(o)">删除</button>
+          </div>
+        </div>
+      </div>
+    </transition-group>
+  </van-pull-refresh>
+
+  <!-- [FIX] 空状态 — 直接绑定 computed, 已完成专属文案见 emptyInfo -->
+  <div class="empty-state" v-if="filteredOrders.length===0&&!refreshing">
+    <span class="empty-icon">{{ emptyInfo.icon }}</span>
+    <div>{{ emptyInfo.text }}</div>
+    <div class="empty-btn" @click="goEmptyLink">{{ emptyInfo.btn }}</div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+ * 订单列表页 — "已完成"入口隔离修复
+ *
+ * 后端枚举约定:
+ *   OrderStatus: 0=拼单中 1=采购中 2=待交接 3=已完成 4=已取消
+ *   接口: GET /api/v1/user/orders?role=created|joined&status=0-4
+ *
+ * 前端key映射:
+ *   paying→(无后端status) gathering→0 delivering→2 finished→3 canceled→4
+ * ═══════════════════════════════════════════════════════════════════ */
+var app = Vue.createApp({
+  setup: function () { requireAuth();
+    var goPage = window.goPage;
+    var getQueryParam = window.getQueryParam;
+
+    /* ── 状态筛选Tab数组 (顺序即渲染顺序) ── */
+    var statusFilters = [
+      {key:'all',label:'全部'},{key:'paying',label:'待支付'},{key:'gathering',label:'待成团'},
+      {key:'delivering',label:'待交接'},{key:'finished',label:'已完成'},{key:'canceled',label:'已取消'},
+    ];
+
+    /* ── 后端 int<->string 映射 ── */
+    var STATUS_INT_TO_STR = {0:'gathering',1:'gathering',2:'delivering',3:'finished',4:'canceled'};
+    var STATUS_LABEL_MAP  = {
+      0:{label:'拼单中',cls:'gathering'},1:{label:'采购中',cls:'gathering'},
+      2:{label:'待交接',cls:'delivering'},3:{label:'已完成',cls:'finished'},4:{label:'已取消',cls:'canceled'}
+    };
+    var STATUS_STR_TO_INT = {gathering:0,delivering:2,finished:3,canceled:4};
+
+    var tabParam = getQueryParam('tab') || '';
+
+    /* ── 入口参数映射: URL ?tab= → 角色 + 状态 ── */
+    var targetRole  = 'joined';   // 默认: 我参与的
+    var targetTab   = 'all';      // 默认: 全部
+
+    /* [FIX] 针对已完成入口 — 硬编码独立分支, 不依赖TAB_MAP查找 */
+    if (tabParam === 'done' || tabParam === 'finished' || tabParam === 'completed') {
+      targetRole = 'joined';
+      targetTab  = 'finished';  // 对应 statusFilters[4].key='finished', 后端statusInt=3
+    } else if (tabParam === 'created') {
+      targetRole = 'created';
+      targetTab  = 'all';
+    } else if (tabParam === 'joined') {
+      targetRole = 'joined';
+      targetTab  = 'all';
+    } else if (tabParam === 'paying') {
+      targetRole = 'joined'; targetTab = 'paying';
+    } else if (tabParam === 'gathering') {
+      targetRole = 'joined'; targetTab = 'gathering';
+    } else if (tabParam === 'deliver' || tabParam === 'delivering') {
+      targetRole = 'joined'; targetTab = 'delivering';
+    } else if (tabParam === 'canceled') {
+      targetRole = 'joined'; targetTab = 'canceled';
+    } else {
+    }
+
+
+    /* ═══════════════════════════════════════════════════════════
+     * Part 3: 入口锁 + onLoad/onShow完整逻辑
+     *
+     * 原则:
+     *   1. setup() = onLoad — 解析参数 + 存入 _entrySource
+     *   2. onMounted = onShow — 检查_entrySource, 首次不重置
+     *   3. 用户手动操作释放锁
+     * ═══════════════════════════════════════════════════════════ */
+
+    /* ── 入口锁: 存入实例私有变量 ── */
+    var _entrySource = tabParam || null;  // [FIX] 私有变量, onShow检查
+    var _isInitialized = false;           // [FIX] 首次初始化标记
+
+
+    /* ── 响应式状态 ── */
+    var role         = Vue.ref(targetRole);
+    var activeStatus = Vue.ref(targetTab);
+    var refreshing   = Vue.ref(false);
+
+
+    var allOrders      = Vue.reactive([]);
+    var filteredOrders = Vue.computed(function () {
+      var list = allOrders;
+      if (activeStatus.value !== 'all') {
+        list = list.filter(function(o) { return o.status === activeStatus.value; });
+      }
+      return list;
+    });
+
+    /* ═══════════════════════════════════════════════════════════
+     * Part 4: 空状态 — "已完成"专属文案
+     * ═══════════════════════════════════════════════════════════ */
+    var EMPTY_MAP = {
+      'paying':     { icon:'💳', text:'暂无待支付订单',   btn:'去逛逛',     link:'index.html' },
+      'gathering':  { icon:'👥', text:'暂无待成团订单',   btn:'去逛逛',     link:'index.html' },
+      'delivering': { icon:'📦', text:'暂无待交接订单',   btn:'去逛逛',     link:'index.html' },
+      'finished':   { icon:'✅', text:'暂无已完成订单',   btn:'去逛逛',     link:'index.html' }, // [FIX] 已完成专属
+      'canceled':   { icon:'❌', text:'暂无已取消订单',   btn:'去逛逛',     link:'index.html' },
+      'all-created':{ icon:'📋', text:'还没有发起过拼单', btn:'去发起拼单', link:'publish.html' },
+      'all-joined': { icon:'📋', text:'还没有参与过拼单', btn:'去逛逛',     link:'index.html' },
+    };
+    var emptyInfo = Vue.computed(function () {
+      /* [FIX] 优先判断是否为具体状态Tab, 已完成走专属文案 */
+      if (activeStatus.value !== 'all') {
+        var entry = EMPTY_MAP[activeStatus.value];
+        return entry || EMPTY_MAP['all-joined'];
+      }
+      return role.value === 'created' ? EMPTY_MAP['all-created'] : EMPTY_MAP['all-joined'];
+    });
+
+    /* ── 数据获取 ── */
+    function fetchOrders() {
+      var currentRole   = role.value === 'created' ? 'created' : 'joined';
+      var currentStatus = activeStatus.value;
+      var statusInt     = STATUS_STR_TO_INT[currentStatus];
+
+      var url = '/api/v1/user/orders?role=' + currentRole + '&page=1&page_size=50';
+      if (statusInt !== undefined) url += '&status=' + statusInt;
+
+      /* [FIX] "已完成"专属日志 — 打印最终API Playload */
+
+      request(url).then(function (res) {
+        if (res && res.code === 0 && res.data && res.data.items) {
+          allOrders.splice(0, allOrders.length);
+          res.data.items.forEach(function (o) {
+            var st = parseInt(o.status, 10) || 0;
+            var sm = STATUS_LABEL_MAP[st] || STATUS_LABEL_MAP[0];
+            var statusStr = STATUS_INT_TO_STR[st] || 'gathering';
+            allOrders.push({
+              id: o.orderId || o.id, goodsName: o.goodsName,
+              spec: '人均¥' + (o.pricePerPerson || '0') + ' · ' + (sm.label),
+              count: 1, price: o.pricePerPerson, role: currentRole,
+              status: statusStr,
+              tagLabel: sm.label, tagClass: sm.cls,
+              statusLabel: sm.label, statusClass: sm.cls,
+              thumb: '🛒', thumbClass: 'food',
+              btnPrimary: st === 2 ? '查看详情' : null,
+              btnOutline: st === 0 ? '邀请好友' : null,
+              btnGhost:   st === 3 ? '申请售后' : null,
+              canDelete: currentRole === 'created' && st !== 2,  // 待交接不可删除
+            });
+          });
+        } else {
+        }
+      }).catch(function (err) {
+      });
+    }
+
+    /* ── watch(role): 数据源切换 ── */
+    Vue.watch(role, function (newRole, oldRole) {
+      fetchOrders();
+    });
+
+    /* ── onMounted = onShow: 锁机制 — 首次不重置Tab ── */
+    Vue.onMounted(function () {
+
+      /* [FIX] 防onShow覆盖: 入口参数存在且未初始化 → 不重置, 只fetch */
+      if (_entrySource && !_isInitialized) {
+        /* 强制再确认一次activeStatus (防御性) */
+        /* [FIX] 针对已完成入口: 如果_entrySource='done'但activeStatus不是'finished', 强制修正 */
+        if (_entrySource === 'done' && activeStatus.value !== 'finished') {
+          activeStatus.value = 'finished';
+        }
+        _isInitialized = true;
+        fetchOrders();
+        return;  // [FIX] 关键: return阻止后续覆盖
+      }
+
+      /* 正常onShow: 仅刷新数据, 不改Tab */
+      fetchOrders();
+    });
+
+    /* ═══════════════════════════════════════════════════════════
+     * 交互方法
+     * ═══════════════════════════════════════════════════════════ */
+
+    /* ── switchTab: 状态筛选点击 ── */
+    var _fetchTimer = null;
+    var switchTab = function (key) {
+      if (activeStatus.value === key) {
+        return;
+      }
+      /* [FIX] 用户主动操作: 释放入口锁 */
+      _entrySource = null;
+      _isInitialized = true;
+      /* [FIX] setData执行前打印 */
+      activeStatus.value = key;
+      clearTimeout(_fetchTimer);
+      _fetchTimer = setTimeout(function () { fetchOrders(); }, 50);
+    };
+
+    /* ── switchRole: 角色切换 ── */
+    var switchRole = function (r) {
+      if (role.value === r) {
+        return;
+      }
+      _entrySource = null;
+      _isInitialized = true;
+      role.value = r;
+      activeStatus.value = 'all';
+    };
+
+    var onRefresh = function () {
+      fetchOrders();
+      setTimeout(function () { refreshing.value = false; }, 600);
+    };
+    var goDetail  = function (o) { goPage('order-detail.html', { id: o.id }); };
+    var onAction  = function (o, action) { goPage('order-detail.html', { id: o.id }); };
+
+    /* ── 删除订单 ── */
+    var onDelete = function (o) {
+      var statusLabel = o.statusLabel || '';
+      var msg = '确定要删除这个订单吗？';
+      if (o.status === 'gathering' || o.status === 'canceled') {
+        msg = '确定要删除这个订单吗？\n删除后订单将被' + (o.status === 'gathering' ? '解散' : '移除') + '，无法恢复。';
+      }
+      vant.showConfirmDialog({
+        title: '删除订单',
+        message: msg,
+        confirmButtonText: '确认删除',
+        confirmButtonColor: '#FF4D4F',
+      }).then(function () {
+        request('/api/v1/orders/' + o.id, { method: 'DELETE' }).then(function (res) {
+          if (res && res.code === 0) {
+            vant.showSuccessToast(res.message || '已删除');
+            // 从本地列表中移除
+            var idx = allOrders.findIndex(function (item) { return item.id === o.id; });
+            if (idx >= 0) { allOrders.splice(idx, 1); }
+          }
+        }).catch(function () {});
+      }).catch(function () {});
+    };
+
+    var goBack    = function () { history.back(); };
+    var goEmptyLink = function () { goPage(emptyInfo.value.link); };
+
+    return {
+      role: role, activeStatus: activeStatus, refreshing: refreshing,
+      statusFilters: statusFilters,
+      filteredOrders: filteredOrders, emptyInfo: emptyInfo,
+      switchTab: switchTab, switchRole: switchRole,
+      onRefresh: onRefresh, goDetail: goDetail, onAction: onAction, onDelete: onDelete,
+      goBack: goBack, goEmptyLink: goEmptyLink,
+    };
+  }
+});
+app.use(vant); app.mount('#app');
+</script>
+</body>
+</html>

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>半仓智拼 · 雷达大厅</title>
+<link rel="dns-prefetch" href="https://unpkg.com" />
+<link rel="preconnect" href="https://unpkg.com" crossorigin />
+<link rel="dns-prefetch" href="https://webapi.amap.com" />
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vant@4/lib/vant.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css" />
+<link rel="stylesheet" href="css/design-system.css" />
+<script src="js/common.js"></script>
+<!-- 高德地图 JSAPI v2.0 -->
+<script src="https://webapi.amap.com/loader.js"></script>
+<script>window._AMapSecurityConfig = { securityJsCode: window.AMAP_CONFIG.jsCode };</script>
+<style>
+/* ── 雷达大厅专属样式 ── */
+#app { background: #fff; padding-bottom: calc(64px + var(--safe-bottom)); }
+
+/* 顶部栏 */
+.header-bar { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(255,255,255,.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(0,0,0,.04); }
+.header-loc { display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 500; color: var(--title); }
+.header-loc .icon { font-size: 18px; } .header-loc .arrow { font-size: 12px; color: var(--hint); margin-left: 2px; }
+.header-msg { position: relative; font-size: 22px; color: var(--title); cursor: pointer; }
+.header-msg .badge { position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; background: var(--danger); border-radius: 50%; border: 1.5px solid #fff; }
+
+/* 搜索栏 */
+.search-bar { padding: 10px 16px; display: flex; gap: 8px; align-items: center; }
+.search-input { flex: 1; height: 36px; border-radius: 18px; background: var(--border-light); border: none; padding: 0 36px 0 14px; font-size: 13px; color: var(--title); outline: none; transition: all var(--transition); }
+.search-input:focus { background: #fff; box-shadow: 0 0 0 2px var(--primary-light); }
+.search-input::placeholder { color: var(--hint); }
+
+/* 品类筛选 */
+.cat-scroll { padding: 0 16px 8px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.cat-scroll::-webkit-scrollbar { display: none; }
+.cat-tag { flex-shrink: 0; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; background: var(--border-light); color: var(--body); border: none; white-space: nowrap; cursor: pointer; transition: all var(--transition); }
+.cat-tag.active { background: var(--primary); color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(255,125,0,.25); }
+.cat-tag:active { transform: scale(.94); }
+
+/* 订单列表 */
+.order-list { padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.order-card { background: var(--card-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid rgba(255,255,255,.6); padding: 14px; transition: all var(--transition); position: relative; overflow: hidden; }
+.order-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--primary-gradient); opacity: 0; transition: opacity var(--transition); }
+.order-card:active { transform: scale(.98); }
+.order-card:hover::before { opacity: 1; }
+
+/* 商品图片占位 */
+.goods-img-placeholder { width: 100%; height: 80px; border-radius: var(--radius-sm); margin-bottom: 10px; display: flex; align-items: center; justify-content: center; font-size: 36px; }
+.goods-img-placeholder.food { background: linear-gradient(135deg, #FFF3E0, #FFE0B2); }
+.goods-img-placeholder.fresh { background: linear-gradient(135deg, #E8F5E9, #C8E6C9); }
+.goods-img-placeholder.daily { background: linear-gradient(135deg, #E3F2FD, #BBDEFB); }
+.goods-img-placeholder.snack { background: linear-gradient(135deg, #FCE4EC, #F8BBD0); }
+.goods-img-placeholder.default { background: linear-gradient(135deg, #F3E5F5, #E1BEE7); }
+
+/* 现货标签 */
+.spot-badge, .normal-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-sm); margin-bottom: 8px; }
+.spot-badge { background: var(--primary-light); color: var(--primary); }
+.normal-badge { background: var(--border-light); color: var(--hint); }
+
+/* 商品标题 */
+.goods-title { font-size: 16px; font-weight: 600; color: var(--title); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 8px; }
+
+/* 价格行 */
+.price-row { display: flex; align-items: baseline; gap: 4px; margin-bottom: 6px; }
+.price-symbol { font-size: 14px; font-weight: 600; color: var(--primary); }
+.price-value { font-size: 22px; font-weight: 700; color: var(--primary); line-height: 1; }
+.price-unit { font-size: 12px; color: var(--hint); }
+
+/* 进度条 */
+.progress-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.progress-text { font-size: 12px; color: var(--hint); flex-shrink: 0; }
+.progress-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--border-light); overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; background: var(--primary-gradient); transition: width .4s ease; }
+
+/* 底部信息 */
+.card-footer { display: flex; align-items: center; justify-content: space-between; }
+.footer-left { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--hint); }
+.footer-left .dot { width: 3px; height: 3px; border-radius: 50%; background: #D0D5DD; }
+.creator-avatar { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #FFD4A3, var(--primary)); display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-weight: 600; flex-shrink: 0; }
+.credit-badge { font-size: 11px; color: var(--hint); background: var(--border-light); padding: 2px 8px; border-radius: var(--radius-sm); }
+
+/* 底部 Tab 栏 */
+.tab-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; display: flex; align-items: center; justify-content: space-around; padding: 8px 0 calc(8px + var(--safe-bottom)); background: rgba(255,255,255,.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid rgba(0,0,0,.04); z-index: 200; }
+.tab-item { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; color: var(--hint); cursor: pointer; transition: all var(--transition); }
+.tab-item.active { color: var(--primary); }
+.tab-item:active { transform: scale(.9); }
+.tab-icon { font-size: 22px; }
+.tab-publish { width: 48px; height: 48px; border-radius: 50%; background: var(--primary-gradient); display: flex; align-items: center; justify-content: center; font-size: 28px; color: #fff; box-shadow: 0 4px 16px rgba(255,125,0,.35); margin-top: -20px; transition: all var(--transition); cursor: pointer; }
+.tab-publish:active { transform: scale(.88); }
+
+/* 加载更多 */
+.load-more { text-align: center; padding: 16px 0; font-size: 12px; color: var(--hint); }
+
+/* 骨架屏 */
+.skeleton-card-item { background: #fff; border-radius: var(--radius); padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header-bar">
+    <div class="header-loc" @click="openMapPicker"><span class="icon">📍</span><span>{{ currentLocation }}</span><span class="arrow">▾</span></div>
+    <div class="header-msg" @click="goPage('messages.html')"><span>💬</span><span class="badge" v-if="unreadCount>0"></span></div>
+  </div>
+  <div class="search-bar">
+    <input class="search-input" v-model="searchKeyword" placeholder="搜索你想拼的商品" @keyup.enter="switchCategory(activeCategory)" />
+  </div>
+  <div class="cat-scroll">
+    <button v-for="cat in categories" :key="cat.key" class="cat-tag" :class="{active:activeCategory===cat.key}" @click="switchCategory(cat.key)">{{ cat.icon }} {{ cat.label }}</button>
+  </div>
+  <!-- 发现 / 我的发布 切换 -->
+  <div style="display:flex;padding:0 16px 4px;gap:0;">
+    <button style="flex:1;height:36px;border:none;border-radius:8px 0 0 8px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s" :style="{background:tabMode==='discover'?'var(--primary)':'#F2F3F5',color:tabMode==='discover'?'#fff':'var(--body)'}" @click="switchTab('discover')">🔍 发现</button>
+    <button style="flex:1;height:36px;border:none;border-radius:0 8px 8px 0;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s" :style="{background:tabMode==='mine'?'var(--primary)':'#F2F3F5',color:tabMode==='mine'?'#fff':'var(--body)'}" @click="switchTab('mine')">📦 我的发布</button>
+  </div>
+  <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
+    <!-- 骨架屏 -->
+    <div v-if="loading && orders.length===0" style="padding:8px 16px">
+      <div class="skeleton-card-item" v-for="n in 3" :key="n">
+        <div class="skeleton" style="width:100%;height:80px;margin-bottom:10px"></div>
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text short"></div>
+      </div>
+    </div>
+    <!-- 订单列表 -->
+    <div class="order-list" v-if="orders.length>0">
+      <div class="order-card" v-for="o in orders" :key="o.orderId" @click="goDetail(o)">
+        <!-- 商品图片占位 -->
+        <div class="goods-img-placeholder" :class="o.goodsCategory||'default'">{{ getCategoryEmoji(o.goodsCategory) }}</div>
+        <span class="spot-badge" v-if="o.isSpot">🔥 现货秒取</span>
+        <span class="normal-badge" v-else>拼单中</span>
+        <div class="goods-title">{{ o.goodsName }}</div>
+        <div class="price-row"><span class="price-symbol">¥</span><span class="price-value">{{ o.pricePerPerson }}</span><span class="price-unit">/人</span></div>
+        <div class="progress-row">
+          <span class="progress-text">还差{{ o.remainingPeople }}人成团</span>
+          <div class="progress-bar"><div class="progress-fill" :style="{width:(o.currentPeople/o.totalPeople*100)+'%'}"></div></div>
+        </div>
+        <div class="card-footer">
+          <div class="footer-left"><span>{{ o.distanceText }}</span><span class="dot"></span><span v-if="o.deadline">⏱ {{ formatDeadline(o.deadline) }}</span></div>
+          <div style="display:flex;align-items:center;gap:4px"><div class="creator-avatar">{{ (o.creatorNickname||'?')[0] }}</div><span class="credit-badge">信用{{ o.creditScore||100 }}</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- 空状态 -->
+    <div class="empty-state" v-else-if="!loading" style="text-align:center;padding:40px 16px">
+      <span class="empty-icon">📭</span>
+      <div class="empty-title">附近暂无拼单</div>
+      <div class="empty-desc" style="margin-bottom:12px;color:var(--hint);font-size:13px">试试扩大搜索范围，或去发现页查看热门拼单</div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <span class="empty-action" @click="openMapPicker" style="background:var(--border-light);color:var(--body)">📍 手动选位置</span>
+        <span class="empty-action" @click="goPage('discover.html')">🔍 去发现页</span>
+        <span class="empty-action" @click="goPage('publish.html')">✏️ 去发单</span>
+      </div>
+    </div>
+  </van-pull-refresh>
+  <div class="load-more" v-if="loading && orders.length>0">加载中…</div>
+
+  <!-- 底部 Tab 栏 -->
+  <div class="tab-bar">
+    <div class="tab-item active" @click="goPage('index.html')"><span class="tab-icon">🏠</span><span>首页</span></div>
+<div class="tab-item" @click="goPage('discover.html')"><span class="tab-icon">🔍</span><span>发现</span></div>
+    <div class="tab-publish" @click="goPage('publish.html')">+</div>
+<div class="tab-item" @click="goPage('messages.html')"><span class="tab-icon">💬</span><span>消息</span></div>
+<div class="tab-item" @click="goPage('profile.html')"><span class="tab-icon">👤</span><span>我的</span></div>
+  </div>
+
+  <!-- ═══ 高德地图选点弹窗 ═══ -->
+  <van-overlay :show="mapVisible" @click="closeMap" z-index="1000">
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;padding:0" @click.stop="">
+      <div style="display:flex;flex-direction:column;width:100%;max-width:480px;height:85vh;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.15);margin:0 8px">
+        <div style="display:flex;align-items:center;padding:10px 14px;background:#fff;border-bottom:1px solid #F0F1F3;gap:8px;flex-shrink:0">
+          <span style="font-size:20px;cursor:pointer;color:var(--hint)" @click="closeMap">✕</span>
+          <span style="font-size:15px;font-weight:600;color:var(--title)">设置当前位置</span>
+        </div>
+        <div style="display:flex;padding:8px 14px;gap:8px;flex-shrink:0">
+          <input v-model="mapSearchKeyword" placeholder="搜索地点" style="flex:1;height:34px;border:1px solid #E5E6EB;border-radius:17px;padding:0 14px;font-size:13px;outline:none;background:#F7F8FA" @keyup.enter="doMapSearch" />
+          <button @click="doMapSearch" style="height:34px;padding:0 14px;border:none;border-radius:17px;background:var(--primary);color:#fff;font-size:12px;font-weight:500;cursor:pointer;flex-shrink:0">搜索</button>
+        </div>
+        <div style="flex:1;position:relative;overflow:hidden;background:#F5F7FA" id="amap-container">
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-100%);z-index:10;font-size:28px;pointer-events:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))">📍</div>
+          <div v-if="mapLocating" style="position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(0,0,0,.7);color:#fff;padding:6px 14px;border-radius:14px;font-size:12px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite"></span>定位中...</div>
+        </div>
+        <div style="flex-shrink:0;z-index:10;background:#fff;border-top:1px solid #F0F1F3;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <div style="flex:1;font-size:13px;color:var(--body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">{{ mapPickedAddr || '拖动地图选择位置' }}</div>
+          <button @click="confirmMapPick" style="height:34px;padding:0 18px;border:none;border-radius:17px;background:var(--primary);color:#fff;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0">确认选点</button>
+        </div>
+      </div>
+    </div>
+  </van-overlay>
+</div>
+<script>
+var app = Vue.createApp({
+  setup: function () {
+    var goPage = window.goPage;
+    var orders = Vue.ref([]), refreshing = Vue.ref(false), loading = Vue.ref(true);
+    var currentLocation = Vue.ref('定位中...'), searchKeyword = Vue.ref('');
+    var activeCategory = Vue.ref('all'), unreadCount = Vue.ref(0);
+    var page = Vue.ref(1), hasMore = Vue.ref(true);
+    var tabMode = Vue.ref('discover');  // 'discover' | 'mine'
+    var forceRefresh = Vue.ref(Date.now());  // 驱动倒计时刷新
+    var userLat = 39.99, userLng = 116.47;
+    var categories = Vue.ref([{ key: 'all', label: '全部', icon: '🏷' }]);
+
+    var categoryEmojiMap = { food: '🍔', fresh: '🥬', daily: '📦', snack: '🍿' };
+    function getCategoryEmoji(cat) { return categoryEmojiMap[cat] || '🛒'; };
+
+    /* ── 高德地图 JSAPI v2.0 ── */
+    var AMapLib = null;
+    var mapVisible = Vue.ref(false), mapSearchKeyword = Vue.ref(''), mapPickedAddr = Vue.ref(''), mapPickedLat = 0, mapPickedLng = 0;
+    var mapLocating = Vue.ref(false);
+    var amapInstance = null, amapGeocoder = null, amapPlaceSearch = null, amapGeolocation = null;
+
+    if (typeof AMapLoader !== 'undefined') {
+      AMapLoader.load({
+        key: window.AMAP_CONFIG.webKey, version: '2.0',
+        plugins: ['AMap.Geocoder', 'AMap.PlaceSearch', 'AMap.Geolocation', 'AMap.AutoComplete'],
+      }).then(function (AMap) {
+        AMap.getConfig().appname = 'halfcart';
+        AMapLib = AMap;
+        // AMap 加载完成后立即创建 Geolocation 实例并触发首页定位
+        amapGeolocation = new AMapLib.Geolocation({ enableHighAccuracy: true, timeout: 8000, GeoLocationFirst: true });
+        if (!_geoDone) { _doGeo(); }
+      }).catch(function (e) { console.error('[AMap] 加载失败:', e); });
+    }
+
+    var _geoDone = false;
+
+    var initMap = function () {
+      var container = document.getElementById('amap-container');
+      if (!container || amapInstance) return;
+      if (!AMapLib) { vant.showToast('地图加载中，请稍后重试'); return; }
+      var cLng = userLng || 116.481488, cLat = userLat || 39.990464;
+      amapInstance = new AMapLib.Map('amap-container', { zoom: 15, center: [cLng, cLat], resizeEnable: true, viewMode: '2D' });
+      amapGeocoder = new AMapLib.Geocoder({ city: '全国' });
+      amapPlaceSearch = new AMapLib.PlaceSearch({ city: '全国', pageSize: 10 });
+      if (!amapGeolocation) {
+        amapGeolocation = new AMapLib.Geolocation({ enableHighAccuracy: true, timeout: 5000, GeoLocationFirst: true });
+      }
+      amapInstance.on('moveend', function () {
+        var c = amapInstance.getCenter(); mapPickedLat = c.lat; mapPickedLng = c.lng;
+        amapGeocoder.getAddress([c.lng, c.lat], function (s, r) {
+          if (s === 'complete' && r.regeocode) mapPickedAddr.value = r.regeocode.formattedAddress || '';
+        });
+      });
+      mapLocating.value = true;
+      amapGeolocation.getCurrentPosition(function (status, result) {
+        mapLocating.value = false;
+        if (status === 'complete' && result.position) {
+          var pos = [result.position.lng, result.position.lat];
+          amapInstance.setZoom(16); amapInstance.setCenter(pos);
+          mapPickedLat = result.position.lat; mapPickedLng = result.position.lng;
+          amapGeocoder.getAddress(pos, function (gs, gr) {
+            if (gs === 'complete' && gr.regeocode) mapPickedAddr.value = gr.regeocode.formattedAddress || '';
+          });
+        } else {
+          mapLocating.value = false;
+          amapGeocoder.getAddress([cLng, cLat], function (gs, gr) {
+            if (gs === 'complete' && gr.regeocode) mapPickedAddr.value = gr.regeocode.formattedAddress || '';
+          });
+        }
+      });
+    };
+
+    var openMapPicker = function () {
+      mapVisible.value = true; mapSearchKeyword.value = '';
+      Vue.nextTick(function () { setTimeout(initMap, 300); });
+    };
+    var doMapSearch = function () {
+      var kw = mapSearchKeyword.value.trim();
+      if (!kw || !amapPlaceSearch) return;
+      amapPlaceSearch.search(kw, function (status, result) {
+        if (status === 'complete' && result.poiList && result.poiList.pois.length > 0) {
+          var poi = result.poiList.pois[0], pos = [poi.location.lng, poi.location.lat];
+          amapInstance.setCenter(pos); amapInstance.setZoom(17);
+          mapPickedLat = poi.location.lat; mapPickedLng = poi.location.lng;
+          mapPickedAddr.value = poi.pname + poi.cityname + poi.adname + poi.name;
+        } else { vant.showToast('未找到相关地点'); }
+      });
+    };
+    var confirmMapPick = function () {
+      if (!mapPickedAddr.value) { vant.showToast('请先选择位置'); return; }
+      userLat = mapPickedLat; userLng = mapPickedLng;
+      currentLocation.value = mapPickedAddr.value.split('省').pop().split('市').pop().substring(0, 10);
+      mapVisible.value = false;
+      page.value = 1; fetchOrders();  // 用新坐标重新拉取附近拼单
+    };
+    var closeMap = function () {
+      mapVisible.value = false;
+      if (amapInstance) { amapInstance.destroy(); amapInstance = null; amapGeocoder = null; amapPlaceSearch = null; amapGeolocation = null; }
+    };
+
+    var deadlineTimers = {}; // 订单ID -> setInterval
+
+    function formatDeadline(d, orderId) {
+      var _ = forceRefresh.value; // 依赖追踪: 确保 setInterval 触发重渲染
+      if (!d) return '';
+      try {
+        var dl = new Date(d).getTime();
+        var now = Date.now();
+        var left = Math.max(0, dl - now);
+        if (left <= 0) return '已截单';
+        if (left < 3600000) return Math.ceil(left / 60000) + '分钟后截单';
+        var h = Math.floor(left / 3600000);
+        var m = Math.floor((left % 3600000) / 60000);
+        return '剩' + h + '小时' + m + '分截单';
+      } catch(e) { return ''; }
+    }
+
+    function startDeadlineTimers() {
+      // 每30秒刷新所有雷达卡的时间显示（Vue会自动重渲染）
+      setInterval(function() {
+        forceRefresh.value = Date.now(); // 触发Vue重新计算
+      }, 30000);
+    }
+
+    function reverseGeocode(lat, lng) {
+      request('/api/v1/lbs/regeo?lat=' + lat + '&lng=' + lng).then(function(res) {
+        if (res && res.code === 0 && res.data) {
+          var addr = res.data.formattedAddress || '';
+          currentLocation.value = addr || (lat.toFixed(2) + ',' + lng.toFixed(2));
+        } else {
+          currentLocation.value = lat.toFixed(2) + ',' + lng.toFixed(2);
+        }
+      }).catch(function(e) {
+        currentLocation.value = lat.toFixed(2) + ',' + lng.toFixed(2);
+      });
+    }
+
+    function _backendIP() {
+      request('/api/v1/lbs/ip-locate').then(function(res) {
+        if (res && res.code === 0 && res.data && res.data.lat) {
+          userLat = res.data.lat;
+          userLng = res.data.lng;
+          reverseGeocode(userLat, userLng);
+          fetchOrders();
+        } else {
+          currentLocation.value = '无法获取位置·请手动选点';
+          fetchOrders();
+        }
+      }).catch(function() {
+        currentLocation.value = '定位失败·请手动选点';
+        fetchOrders();
+      });
+    }
+
+    function getLocation() {
+      currentLocation.value = '定位中...';
+      // 统一使用高德定位 (和地图选点相同配置, 已验证可用)
+      if (AMapLib) {
+        _doGeo();
+      } else {
+        var waited = 0;
+        var timer = setInterval(function() {
+          waited += 300;
+          if (AMapLib) { clearInterval(timer); _doGeo(); }
+          else if (waited >= 8000) { clearInterval(timer); _backendIP(); }
+        }, 300);
+      }
+    }
+
+    function _doGeo() {
+      if (_geoDone) return;
+      if (!amapGeolocation) { _tryBrowserGPS(); return; }
+      _geoDone = true;
+      amapGeolocation.getCurrentPosition(function(status, result) {
+        if (status === 'complete' && result.position) {
+          userLat = result.position.lat;
+          userLng = result.position.lng;
+          // 始终用坐标反查地址，不信任 IP 库的 formattedAddress
+          reverseGeocode(userLat, userLng);
+          fetchOrders();
+        } else {
+          _tryBrowserGPS();
+        }
+      });
+    }
+
+    function _tryBrowserGPS() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function(pos) {
+            userLat = pos.coords.latitude;
+            userLng = pos.coords.longitude;
+            reverseGeocode(userLat, userLng);
+            fetchOrders();
+          },
+          function() { _backendIP(); },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+        );
+      } else {
+        _backendIP();
+      }
+    }
+
+    function fetchOrders() {
+      if (tabMode.value === 'mine') {
+        // 我的发布 — 调 MySQL 接口 (不支持品类/关键词筛选)
+        var params = { page: page.value, page_size: 20 };
+        request('/api/v1/orders/my/created?' + Object.keys(params).map(function(k){return k+'='+encodeURIComponent(params[k])}).join('&'))
+          .then(function (res) {
+            if (res && res.code === 0 && res.data) {
+              var items = (res.data.items || []).map(function (item) {
+                return {
+                  orderId: item.orderId, orderNo: item.orderNo, goodsName: item.goodsName,
+                  goodsCategory: item.goodsCategory, pricePerPerson: item.pricePerPerson,
+                  totalPeople: item.totalPeople, currentPeople: item.currentPeople,
+                  remainingPeople: Math.max(0, (item.totalPeople||0) - (item.currentPeople||0)),
+                  distanceM: 0, distanceText: '',
+                  meetLocation: item.meetLocation, isSpot: item.isSpot, deadline: item.deadline,
+                  creditScore: 100, status: item.status, statusLabel: item.statusLabel,
+                  creatorNickname: (getUser()||{}).nickname || '我'
+                };
+              });
+              if (page.value === 1) { orders.value = items; } else { orders.value = orders.value.concat(items); }
+              hasMore.value = items.length >= 20;
+            }
+          }).catch(function () {}).finally(function () { refreshing.value = false; loading.value = false; });
+        return;
+      }
+      // 雷达大厅 — 原有逻辑
+      var params = { lat: userLat, lng: userLng, page: page.value, page_size: 20, radius_km: 3.0 };
+      if (activeCategory.value !== 'all') params.category = activeCategory.value;
+      if (searchKeyword.value.trim()) params.keyword = searchKeyword.value.trim();
+      var uid = (getUser()||{}).userId;
+      request('/api/v1/radar/list?' + Object.keys(params).map(function(k){return k+'='+encodeURIComponent(params[k])}).join('&'))
+        .then(function (res) {
+          if (res && res.code === 0 && res.data) {
+            var items = (res.data.items || []).map(function (item) {
+              return {
+                orderId: item.orderId, orderNo: item.orderNo, goodsName: item.goodsName,
+                goodsCategory: item.goodsCategory, pricePerPerson: item.pricePerPerson,
+                totalPeople: item.totalPeople, currentPeople: item.currentPeople,
+                remainingPeople: item.remainingPeople || Math.max(0, (item.totalPeople||0) - (item.currentPeople||0)),
+                distanceM: item.distanceM, distanceText: item.distanceM ? (item.distanceM < 1000 ? Math.round(item.distanceM) + 'm' : (item.distanceM/1000).toFixed(1)+'km') : '',
+                meetLocation: item.meetLocation, isSpot: item.isSpot, deadline: item.deadline,
+                creditScore: item.creditScore, status: item.status, statusLabel: item.statusLabel,
+                creatorNickname: item.creatorNickname || ''
+              };
+            });
+            if (page.value === 1) { orders.value = items.filter(function(o){ return o.orderId && o.creatorId !== uid; }); } else { orders.value = orders.value.concat(items); }
+            hasMore.value = items.length >= 20;
+          }
+        }).catch(function () {}).finally(function () { refreshing.value = false; loading.value = false; });
+
+    }
+    function onRefresh() { page.value = 1; refreshing.value = true; fetchOrders(); }
+    function switchCategory(key) { activeCategory.value = key; tabMode.value = 'discover'; page.value = 1; fetchOrders(); }
+    function switchTab(mode) { if (mode === 'mine' && !requireAuth()) return; tabMode.value = mode; activeCategory.value = 'all'; page.value = 1; loading.value = true; orders.value = []; fetchOrders(); }
+    function goDetail(o) { goPage('order-detail.html', { id: o.orderId }); }
+
+    Vue.onMounted(function () {
+      getLocation();
+      startDeadlineTimers();
+      // 动态获取品类列表
+      request('/api/v1/categories').then(function (res) {
+        if (res && res.code === 0 && res.data && res.data.categories) {
+          var dynamic = res.data.categories.map(function(c) { return { key: c.key, label: c.label, icon: c.icon }; });
+          categories.value = [{ key: 'all', label: '全部', icon: '🏷' }].concat(dynamic);
+        }
+      }).catch(function () {});
+    });
+    return { goPage, orders, refreshing, loading, currentLocation, searchKeyword, activeCategory, unreadCount, categories, tabMode, onRefresh, switchCategory, switchTab, goDetail, formatDeadline, getCategoryEmoji, mapVisible, mapSearchKeyword, mapPickedAddr, mapLocating, openMapPicker, doMapSearch, confirmMapPick, closeMap };
+  }
+});
+app.use(vant); app.mount('#app');
+</script>
+</body>
+</html>
